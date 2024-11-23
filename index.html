@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Maze-o-Rama</title>
+    <style>
+        body {
+			margin: 0;
+			overflow: auto; /* Enable scrollbars when content overflows */
+		}		
+        #controls {
+			position: relative;
+			margin: 0 auto; /* Center horizontally */
+			max-width: 600px; /* Limit the width for better design */
+			background: rgba(255, 255, 255, 0.9); /* Slightly more opaque background */
+			padding: 20px;
+			border-radius: 10px;
+			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+		}
+		fieldset {
+			margin: 20px 0; /* Add spacing between fieldsets */
+			padding: 15px;
+			border: 1px solid #ccc;
+			border-radius: 8px;
+			background: #f9f9f9;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		}
+		legend {
+			font-weight: bold;
+			padding: 0 10px;
+			color: #333;
+		}
+		label > input, label > select {
+			margin-left: 10px; /* Space between label and field */
+			flex: 1; /* Allow fields to stretch uniformly */
+			max-width: 300px; /* Optional: Limit field width */    
+			box-sizing: border-box; /* Include padding/border in height calculation */
+		}
+		label {
+			display: flex;
+			align-items: center; /* Vertically align labels and fields */
+			justify-content: space-between; /* Space between label text and input field */
+			margin-bottom: 10px; /* Add spacing between rows */
+		}
+		
+        #gameCanvas { display: none; }
+			#previewCanvas {
+			margin-top: 10px;        
+			max-height: 70vh; /* Limits height to 70% of viewport */
+			width: auto;
+		}
+    </style>
+</head>
+<body>
+	<div id="titleText" style="text-align: center; padding: 20px;">
+        <h1>Welcome to Maze-o-Rama!</h1>
+        <p>Create all sorts of mazes and explore them in 3D!</p>        
+    </div>
+	<div id="gameCanvasContainer" style="position: relative;">
+		<canvas id="gameCanvas"></canvas>
+		<div id="timerDisplay" style="position: absolute; top: 10px; right: 10px; font-size: 20px; font-weight: bold; display: none; color:white;">
+			Time: 00:00
+		</div>
+		<button id="endGameButton" style="position: absolute; bottom: 10px; right: 10px; display: none;">
+			Go Back
+		</button>
+	</div>
+	<div id="controls">
+		<fieldset>
+			<legend>Maze Generation Definitions</legend>			
+			<label>Generation algorithm:
+				<select id="algorithm">
+					<option value="recursiveBacktracking">Recursive Backtracking</option>
+					<option value="prim">Prim's Algorithm</option>
+					<option value="kruskal">Kruskal's Algorithm</option>								
+					<option value="wilson">Wilson's Algorithm</option>
+					<option value="huntAndKill">Hunt-and-Kill Algorithm</option>
+					<option value="growingTree">Growing Tree Algorithm</option>				
+				</select>					
+			</label>			
+			<label>Layout:
+				<select id="layout">
+					<option value="rectangular">Rectangular</option>
+					<option value="circular">Circular</option>	
+					<option value="cross">Cross</option>
+					<option value="X">X-Shaped</option>
+					<option value="brain">Brain-Shaped</option>
+					<option value="diamond">Diamond</option>
+					<option value="star">Star</option>
+					<option value="keep">Keep</option>
+					<option value="donut">Donut</option>
+					<option value="squareHole">Square Hole</option>
+					<option value="circularHole">Circular Hole</option>
+				</select>
+			</label>			
+			<label>Width:
+				<input type="number" id="mazeWidth" value="21" min="3" step="1">
+			</label>
+			<label>Height:
+				<input type="number" id="mazeHeight" value="21" min="3" step="1">
+			</label>
+			<label><div style="justify-content: none;">Seed (<a href="javascript:document.getElementById('mazeSeed').value = Math.round(Math.random() * 1000000);">Random</a>):</div>
+				<input type="text" id="mazeSeed">				
+			</label> 
+			<label>Min distance from entrance to exit (%):
+				<input type="number" id="exitDistance" value="0.5" min="0.1" max ="1.0" step="0.05">
+			</label>			
+		</fieldset>
+		<fieldset>
+			<legend>Preview</legend>
+			<div style="display: flex; align-items: center; margin-bottom: 8px;">
+				<button id="previewMazeButton" onclick="changePreviewMazeOn()" style="display: block; margin-top:15px; margin-bottom:15px; width: 100%; min-height: 30px;">Preview Maze</button>
+			</div>		
+			<canvas id="previewCanvas" style="width: 100%; height: auto; margin-bottom:15px; display:none;"></canvas>			
+			<div id="thinWallsDiv" style="display: none;  margin-bottom: 8px;">
+				<input type="checkbox" id="thinWalls" />
+				<label for="thinWalls" style="margin-left: 5px;">Show thin walls (printer-friendly)</label>
+			</div>
+			<div id="showSolutionDiv" style="display: none; align-items: center; margin-bottom: 8px;">
+				<input type="checkbox" id="showSolution" />
+				<label for="showSolution" style="margin-left: 5px;">Show solution</label>
+			</div>
+			<div id="includeSettingsDiv" style="display: none; align-items: center; margin-bottom: 8px;">
+				<input type="checkbox" id="includeSettings" />
+				<label for="includeSettings" style="margin-left: 5px;">Include maze generation definitions in print</label>
+			</div>
+			<button id="printButton" style="display: none;">Print Maze</button>
+		</fieldset>
+		<fieldset>
+			<legend>3d Exploration</legend>		
+			<button onclick="start3dGame()" style="display: block; margin-top:15px; margin-bottom:0px; width: 100%; min-height: 30px;">Explore the Maze in 3D!</button><br>
+			<div style="display: flex; align-items: center; margin-bottom: 8px;">
+				<input type="checkbox" id="enableTimer" />
+				<label for="enableTimer" style="margin-left: 5px;">Enable Timer</label>
+			</div>		
+			<div style="display: flex; align-items: center; margin-bottom: 8px;">
+				<input type="checkbox" id="showCompass" />
+				<label for="showCompass" style="margin-left: 5px;">Show Compass</label>
+			</div>		
+			<fieldset>
+				<legend>Minimap</legend>			
+				<label>Minimap Size:
+					<input type="number" id="minimapSize" value="150" step="1" min="15">
+				</label>
+				<div style="display: flex; align-items: center; margin-bottom: 8px;">
+					<input type="checkbox" id="showMinimap" checked />
+					<label for="showMinimap" style="margin-left: 5px;">Show Minimap</label>
+				</div>
+				<div style="display: flex; align-items: center; margin-bottom: 8px;">
+					<input type="checkbox" id="fogOfWar" checked />
+					<label for="fogOfWar" style="margin-left: 5px;">Fog of War</label>
+				</div>			
+				<div style="display: flex; align-items: center; margin-bottom: 8px;">
+					<input type="checkbox" id="showExit" />
+					<label for="showExit" style="margin-left: 5px;">Show Exit in Minimap when Fog of War is on</label>
+				</div>
+			</fieldset>
+			<fieldset>
+				<legend>Movement</legend>			
+				<label>Rotate Speed:
+					<input type="number" id="rotateSpeed" value="3" step="0.1" min="0.1">
+				</label>
+				<label>Movement Speed: 
+					<input type="number" id="moveSpeed" value="2" step="0.1" min="0.1">
+				</label>		
+			</fieldset>		
+			<fieldset>				
+				<legend>Appearance</legend>			
+				<label>Wall Color:
+					<input type="color" id="wallColor" value="#c80000">
+				</label>
+				<div style="display: flex; align-items: center; margin-bottom: 8px;">
+					<input type="checkbox" id="edgeLines" checked />
+					<label for="edgeLines" style="margin-left: 5px;">Show Edge Lines</label>
+				</div>
+				<div style="display: flex; align-items: center; margin-bottom: 8px;">
+					<input type="checkbox" id="showDepth" checked />
+					<label for="showDepth" style="margin-left: 5px;">Show Depth</label>
+				</div>
+			</fieldset>		
+			<br>
+		</fieldset>		
+	</div>
+	<canvas id="gameCanvas"></canvas>
+	<script>
+		let canvas, ctx, map, player, keys, wallColor, moveSpeed, rotateSpeed, randomFunc, timerInterval, mazeData, showEdgeLines, seedInput, startTime;
+		let visitedCells = [];
+		let previewOn = false;
+		let exitCell = {};
+		const FOV = Math.PI / 3;    
+		let gameEnded = false; 
+		let mazeGenerated = false; // Flag to track if a preview has been generated
+			
+		function saveInputs() {
+			localStorage.setItem("algorithm", document.getElementById("algorithm").value);
+			localStorage.setItem("layout", document.getElementById("layout").value);
+			localStorage.setItem("mazeWidth", document.getElementById("mazeWidth").value);
+			localStorage.setItem("mazeHeight", document.getElementById("mazeHeight").value);
+			localStorage.setItem("wallColor", document.getElementById("wallColor").value);
+			localStorage.setItem("rotateSpeed", document.getElementById("rotateSpeed").value);
+			localStorage.setItem("moveSpeed", document.getElementById("moveSpeed").value);
+			localStorage.setItem("minimapSize", document.getElementById("minimapSize").value);
+			localStorage.setItem("mazeSeed", document.getElementById("mazeSeed").value);
+			localStorage.setItem("enableTimer", document.getElementById("enableTimer").checked);
+			localStorage.setItem("showMinimap", document.getElementById("showMinimap").checked);
+			localStorage.setItem("fogOfWar", document.getElementById("fogOfWar").checked);			
+			localStorage.setItem("previewOn", !previewOn || false);
+			localStorage.setItem("edgeLines", document.getElementById("edgeLines").checked);
+			localStorage.setItem("showDepth", document.getElementById("showDepth").checked);
+			localStorage.setItem("showExit", document.getElementById("showExit").checked);
+			localStorage.setItem("thinWalls", document.getElementById("thinWalls").checked);
+			localStorage.setItem("showSolution", document.getElementById("showSolution").checked);
+			localStorage.setItem("showCompass", document.getElementById("showCompass").checked);	
+			localStorage.setItem("exitDistance", document.getElementById("exitDistance").value);	
+		}
+
+		function loadInputs() {
+			document.getElementById("algorithm").value = localStorage.getItem("algorithm") || "recursiveBacktracking";
+			document.getElementById("layout").value = localStorage.getItem("layout") || "rectangular";
+			document.getElementById("mazeWidth").value = localStorage.getItem("mazeWidth") || 21;
+			document.getElementById("mazeHeight").value = localStorage.getItem("mazeHeight") || 21;
+			document.getElementById("wallColor").value = localStorage.getItem("wallColor") || "#c80000";
+			document.getElementById("rotateSpeed").value = localStorage.getItem("rotateSpeed") || 3;
+			document.getElementById("moveSpeed").value = localStorage.getItem("moveSpeed") || 2;			
+			previewOn = localStorage.getItem("previewOn") === "true";	
+			document.getElementById("minimapSize").value = localStorage.getItem("minimapSize") || 150;
+			document.getElementById("mazeSeed").value = localStorage.getItem("mazeSeed") || Math.round(Math.random() * 10000);
+			document.getElementById("enableTimer").checked = localStorage.getItem("enableTimer") === "true";
+			document.getElementById("showMinimap").checked = localStorage.getItem("showMinimap") === "true";
+			document.getElementById("fogOfWar").checked = localStorage.getItem("fogOfWar") === "true";
+			document.getElementById("edgeLines").checked = localStorage.getItem("edgeLines") === "true";
+			document.getElementById("showDepth").checked = localStorage.getItem("showDepth") === "true";
+			document.getElementById("showExit").checked = localStorage.getItem("showExit") === "true";
+			document.getElementById("thinWalls").checked = localStorage.getItem("thinWalls") === "true";
+			document.getElementById("showSolution").checked = localStorage.getItem("showSolution") === "true";
+			document.getElementById("showCompass").checked = localStorage.getItem("showCompass") === "true";
+			document.getElementById("exitDistance").value = localStorage.getItem("exitDistance") || 0.8;
+			changePreviewMazeOn();
+		}
+
+		function previewMaze() {
+			saveInputs();
+			const widthInput = parseInt(document.getElementById('mazeWidth').value) * 2 + 1;
+			const heightInput = parseInt(document.getElementById('mazeHeight').value) * 2 + 1;
+			const algorithm = document.getElementById('algorithm').value;
+			const layout = document.getElementById('layout').value;
+			const mazeSeed = document.getElementById('mazeSeed').value;
+			const exitDistance = document.getElementById('exitDistance').value;
+			wallColor = document.getElementById('wallColor').value;
+			// Generate maze data but do not start the game or hide the UI        
+			mazeData = getMaze(widthInput, heightInput, algorithm, layout, exitDistance);
+			mazeGenerated = true;
+			// Render the 2D preview on the minimap (full-size display)
+			showMazePreview(mazeData);		
+		}  
+
+		// Function to find the solution path using BFS for previewCanvas
+		function findSolutionPath(maze) {
+			const start = { x: startCell.x, y: startCell.y };
+			const end = { x: exitCell.x, y: exitCell.y };
+			const queue = [[start]];
+			const visited = Array.from({ length: maze.length }, () => Array(maze[0].length).fill(false));
+			visited[start.y][start.x] = true;
+			while (queue.length > 0) {
+				const path = queue.shift();
+				const { x, y } = path[path.length - 1];
+				if (x === end.x && y === end.y) {
+					return path;
+				}
+				// Define the four possible directions
+				const directions = [
+					{ x: x + 1, y }, { x: x - 1, y },
+					{ x, y: y + 1 }, { x, y: y - 1 }
+				];
+				for (const { x: nx, y: ny } of directions) {
+					if (maze[ny] && maze[ny][nx] === 0 && !visited[ny][nx]) {
+						visited[ny][nx] = true;
+						queue.push([...path, { x: nx, y: ny }]);
+					}
+				}
+			}
+			return []; // Return an empty path if no solution is found
+		}
+
+		// Function to render the 2D preview of the maze on previewCanvas
+		function showMazePreview(maze) {
+			const previewCanvas = document.getElementById('previewCanvas');
+			const ctx = previewCanvas.getContext('2d');
+			const cellSize = 10; // Default cell size, make it customizable?
+			const thinWalls = document.getElementById('thinWalls').checked; // thin walls option is for printing
+			const showSolution = document.getElementById('showSolution').checked;			
+			previewCanvas.width = maze[0].length * cellSize;
+			previewCanvas.height = maze.length * cellSize;			
+			ctx.strokeStyle = wallColor;
+			ctx.fillStyle = wallColor;
+			// Draw the maze
+			for (let y = 0; y < maze.length; y++) {
+				for (let x = 0; x < maze[y].length; x++) {
+					if (maze[y][x] === 1) { // If it's a wall
+						if (thinWalls) {                        
+							if (y > 0 && maze[y - 1][x] === 1) {
+								ctx.beginPath();
+								ctx.moveTo(x * cellSize + cellSize / 2, y * cellSize + cellSize / 2);
+								ctx.lineTo(x * cellSize + cellSize / 2, (y - 1) * cellSize + cellSize / 2);
+								ctx.stroke();
+							}
+							if (x > 0 && maze[y][x - 1] === 1) {
+								ctx.beginPath();
+								ctx.moveTo(x * cellSize + cellSize / 2, y * cellSize + cellSize / 2);
+								ctx.lineTo((x - 1) * cellSize + cellSize / 2, y * cellSize + cellSize / 2);
+								ctx.stroke();
+							}
+						} else {
+							ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+						}
+					}
+				}
+			}
+			// Draw the solution path if enabled
+			if (showSolution) {
+				const solutionPath = findSolutionPath(maze);
+				ctx.strokeStyle = '#000000'; //solutionColor;
+				ctx.lineWidth = 2;
+				ctx.beginPath();
+				solutionPath.forEach((cell, index) => {
+				ctx.setLineDash([5, 5]); // Set the dash pattern (5px dash, 5px gap)
+					const x = cell.x * cellSize + cellSize / 2;
+					const y = cell.y * cellSize + cellSize / 2;
+					if (index === 0) {
+						ctx.moveTo(x, y);
+					} else {
+						ctx.lineTo(x, y);
+					}
+				});
+				ctx.stroke();
+			}
+			// Draw the exit cell with a small green "X"
+			//ctx.fillStyle = '#00FF00'; // Green color for the exit
+			//ctx.beginPath();
+			//ctx.fillRect(startCell.x * cellSize, startCell.y * cellSize, cellSize, cellSize);
+			//ctx.fillRect(exitCell.x * cellSize, exitCell.y * cellSize, cellSize, cellSize);
+			//ctx.stroke();		
+		}
+
+		// Start the 3d game with the selected options
+		function start3dGame() {
+			saveInputs();
+			widthInput = parseInt(document.getElementById('mazeWidth').value) * 2 + 1;
+			heightInput = parseInt(document.getElementById('mazeHeight').value) * 2 + 1;
+			wallColor = document.getElementById('wallColor').value;
+			rotateSpeed = parseFloat(document.getElementById('rotateSpeed').value) / 100;
+			moveSpeed = parseFloat(document.getElementById('moveSpeed').value) / 10;
+			exitDistance = parseFloat(document.getElementById('exitDistance').value);
+			minimapSize = parseInt(document.getElementById('minimapSize').value);		
+			mazeSeed = document.getElementById('mazeSeed').value;
+			showEdgeLines = document.getElementById('edgeLines').checked;
+			showMinimap = document.getElementById('showMinimap').checked;
+			fogOfWar = document.getElementById('fogOfWar').checked;
+			showExit = document.getElementById('showExit').checked;
+			showDepth = document.getElementById('showDepth').checked;
+			showCompass = document.getElementById('showCompass').checked;
+			enableTimer = document.getElementById('enableTimer').checked; // Check if timer is enabled
+			canvas = document.getElementById('gameCanvas');
+			canvas.style.display = 'block';
+			ctx = canvas.getContext('2d');
+			gameEnded = false;			
+			document.getElementById('timerDisplay').style.display = enableTimer ? 'block' : 'none';		
+			document.getElementById('endGameButton').style.display = 'block';				
+			randomFunc = seedRandom(parseInt(mazeSeed) || Date.now()); // Default to current time if no seed is provided				
+			if (enableTimer) startTimer();				
+			if (mazeGenerated) {
+				// Use the previously generated maze
+				map = mazeData;
+			} else {		
+				getMaze(widthInput, heightInput, algorithm, layout, exitDistance);
+			}				
+			// Close entrance
+			map[startCell.y][startCell.x] = 1;		
+			 // Ensure the player does not start facing a wall
+			while (isFacingWall(player)) {
+				player.angle += Math.PI / 2; // Rotate by 90 degrees (π/2 radians)
+			}		
+			resizeCanvas();
+			document.getElementById('controls').style.display = 'none';
+			document.getElementById('titleText').style.display = 'none';
+			window.requestAnimationFrame(gameLoop);
+		}
+		
+		// Initialize maze and player properties
+		function getMaze(width, height, algorithm, layout, exitDistance) {
+			map = [];
+			visitedCells = Array.from({ length: height }, () => Array(width).fill(false));		
+			keys = {};
+			// Initialize the seeded random function
+			randomFunc = seedRandom(mazeSeed || Date.now().toString());				
+			//generate the maze using the selected layout
+			map = fillMapWithWalls(map, width, height);
+			map = applyLayout(map, width, height);
+			generateMaze(width, height);		
+			//post processing
+			map = addExteriorWalls(map, width, height);	
+			let {start, end} = getStartAndEndPositions(map, exitDistance);				
+			exitCell = { x: end.x, y: end.y };
+			startCell = { x: start.x, y: start.y };
+			map[startCell.y][startCell.x] = 0; // Make sure the start cell itself is open		
+			map[exitCell.y][exitCell.x] = 0; // Make sure the exit cell itself is open				
+			let playerStartCell = getAvailableNeighbor(startCell, width, height);
+			player = { x: playerStartCell.x + 0.5, y: playerStartCell.y + .5, angle: 0 };		
+			visitedCells[Math.floor(player.y)][Math.floor(player.x)] = true; // Mark start cell as visited				
+			return map;	
+		}	
+		
+		function generateMaze(width, height) {
+			algorithm = document.getElementById('algorithm').value;	
+			switch (algorithm) {
+				case 'prim':
+					generateMazePrim(width, height);
+					break;
+				case 'kruskal':
+					generateMazeKruskal(width, height);
+					break;
+				case 'eller':
+					generateMazeEller(width, height);
+					break;
+				case 'recursiveDivision':
+					startRecursiveDivision(width, height);
+					break;
+				case 'binaryTree':
+					generateMazeBinaryTree(width, height);
+					break;
+				case 'aldousBroder':
+					generateMazeAldousBroder(width, height);
+					break;
+				case 'wilson':
+					generateMazeWilson(width, height);
+					break;
+				case 'huntAndKill':
+					generateMazeHuntAndKill(width, height);
+					break;
+				case 'growingTree':
+					generateMazeGrowingTree(width, height);
+					break;
+				default:
+					generateRecursiveBacktracingMaze(width, height); // Recursive backtracking
+					break;
+			} 
+		}
+		
+		function applyLayout(map, width, height) {	
+			layout = document.getElementById('layout').value;
+			switch(layout) {
+				case 'circular':
+					map = applyCircularLayout(map, width, height);
+					break;
+				case 'cross':
+					map = applyCrossLayout(map, width, height);
+					break;
+				case 'star':
+					map = applyCrossLayout(map, width, height);
+					map = applyXLayout(map, width, height);
+					break;
+				case 'X':
+					map = applyXLayout(map, width, height);
+					break;
+				case 'brain':
+					map = applyBrainLayout(map, width, height);
+					break;
+				case 'diamond':
+					map = applyDiamondLayout(map, width, height);
+					break;
+				case 'keep':
+					map = applyKeepLayout(map, width, height);
+					break;
+				case 'donut':
+					map = applyCircularLayout(map, width, height);
+					map = applyCircularLayout(map, width, height, 0.4, false);
+					break;
+				case 'circularHole':			
+					map = applyCircularLayout(map, width, height, 0.5, false);
+					break;				
+				case 'squareHole':			
+					map = applyNegativeRectangularLayout(map, width, height, 0.4);
+					break;
+				default:		
+					break;
+			}
+			return map;
+		}
+
+		function getAvailableNeighbor(cell, width, height) {		
+			let {x, y} = cell;
+			for (let dy = -1; dy <= 1; dy++) {			
+				for (let dx = -1; dx <= 1; dx++) {
+					if ((dx === 0 || dy === 0) && dx != dy && x + dx >= 0 && x + dx <= width && y + dy >= 0 && y + dy <= height) {
+						if (map[y + dy][ x + dx] === 0) {
+							x = x + dx;
+							y = y + dy;
+							return {x, y};
+						}
+					}
+				}
+			}
+			return {x, y};
+		}
+
+		function fillMapWithWalls(map, width, height) {
+			for (let y = 0; y < height; y++) {
+				map[y] = [];
+				for (let x = 0; x < width; x++) {
+					map[y][x] = 1; // 1 represents a wall
+				}
+			}
+			return map;
+		}
+		
+		function addExteriorWalls(map, width, height) {
+			for (let y = 0; y < height; y++) {
+				for (let x = 0; x < width; x++) {
+					if (map[y][x] === 0) { // Only check cells that are paths
+						const directions = [
+							[0, 1], [1, 0], [0, -1], [-1, 0], [-1,-1], [-1, 1], [1, -1], [1, 1] // Right, Down, Left, Up
+						];
+						directions.forEach(([dy, dx]) => {
+							const ny = y + dy;
+							const nx = x + dx;
+							if (map[ny] && map[ny][nx] >= 2) {
+								// If a neighboring cell is unavailable, set current cell's border as a wall
+								map[ny][nx] = 1;
+							}
+						});
+					}
+				}		
+			}
+			return map;
+		}		
+		
+		function applyCircularLayout(map, width, height, radiusPerc = 1, positive = true) {
+			const centerX = Math.floor(width / 2);
+			const centerY = Math.floor(height / 2);
+			const radius = (Math.min(centerX, centerY) - 2) * radiusPerc;
+			for (let y = 0; y < height; y++) {
+				for (let x = 0; x < width; x++) {
+					const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+					if (positive) {
+						if (distance > radius) map[y][x] = 2; // Mark as exterior unavailable cell			
+					} else {
+						if (distance < radius) map[y][x] = 3; // Mark as interior unavailable cell			
+					}
+				}
+			}
+			return map;
+		}
+
+		function applyCrossLayout(map, width, height) {
+			const centerX = Math.floor(width / 2);
+			const centerY = Math.floor(height / 2);
+			const armWidth = Math.floor(Math.min(width, height) / 4); // Set the arm width of the cross
+			for (let y = 0; y < height; y++) {
+				for (let x = 0; x < width; x++) {
+					// Check if cell is outside the cross arms
+					const isHorizontalArm = x >= centerX - armWidth && x <= centerX + armWidth;
+					const isVerticalArm = y >= centerY - armWidth && y <= centerY + armWidth;				
+					if (!isHorizontalArm && !isVerticalArm) {
+						map[y][x] = 2; // Mark as unavailable cell
+					}
+				}
+			}
+			return map;
+		}
+		
+		function applyXLayout(map, width, height) {
+			let thickness = Math.min(height, width) / 4;
+			const aspectRatio = width / height;
+			for (let y = 0; y < height; y++) {
+				for (let x = 0; x < width; x++) {
+					// Scale the x-coordinate by the aspect ratio to keep diagonals aligned
+					const normalizedX = x / aspectRatio;
+					const normalizedWidth = width / aspectRatio;
+					// Calculate distances to each diagonal in the normalized space
+					const distanceToDiagonal1 = Math.abs(normalizedX - y);
+					const distanceToDiagonal2 = Math.abs(normalizedX - (height - y - 1));
+					// Mark cells that are not within the thickness of either diagonal as unavailable
+					if (distanceToDiagonal1 > thickness && distanceToDiagonal2 > thickness) {
+						map[y][x] = 2; // Mark as unavailable cell
+					}
+				}
+			}
+			return map;
+		}
+		
+		function applyBrainLayout(map, width, height) {
+			const centerX = Math.floor(width / 2);
+			const centerY = Math.floor(height / 2);
+			const radius = Math.min(centerX, centerY) - 2; // Radius for the hexagon
+
+			for (let y = 0; y < height; y++) {
+				for (let x = 0; x < width; x++) {
+					// Calculate the "hex distance" from the center
+					const dx = Math.abs(x - centerX);
+					const dy = Math.abs(y - centerY);
+					// Hexagonal boundary condition
+					if (dx + dy > radius || dy > radius / 2 + dx) {
+						map[y][x] = 2; // Mark cell as unavailable
+					}
+				}
+			}
+			return map;
+		}
+		
+		function applyDiamondLayout(map, width, height) {
+			const centerX = Math.floor(width / 2);
+			const centerY = Math.floor(height / 2);
+			const radius = Math.min(centerX, centerY) - 2; // Radius for the diamond shape
+
+			for (let y = 0; y < height; y++) {
+				for (let x = 0; x < width; x++) {
+					// Calculate the Manhattan distance from the center
+					const distance = Math.abs(x - centerX) + Math.abs(y - centerY);
+					// Mark cells as unavailable if they are outside the diamond boundary
+					if (distance > radius) {
+						map[y][x] = 2;
+					}
+				}
+			}
+			return map;
+		}
+		
+		function applyKeepLayout(map, width, height) {		
+			for (let y = 0; y < height; y++) {
+				for (let x = 0; x < width; x++) {		
+					if (x > width * 0.4 && x < width * 0.6 && (y < height * 0.25 || y > height * 0.75))
+					map[y][x] = 2;
+					if (y > height * 0.4 && y < height * 0.6 && (x < width * 0.25 || x > width * 0.75))
+					map[y][x] = 2;
+				}
+			}
+			return map;
+		}
+
+		function applyNegativeRectangularLayout(map, width, height, Perc) {		
+			const startX = Math.floor(width * (1 - Perc) / 2);
+			const startY = Math.floor(height * (1 - Perc) / 2);		
+			for (let y = startY; y < height - startY; y++) {
+				for (let x = startX; x < width - startX; x++) {		
+					map[y][x] = 3; // Mark as unavailable cell			
+				}
+			}
+			return map;
+		}
+
+		// Function to place exit on an exterior wall
+		function placeExit(width, height) {
+			const edges = [
+				{ x: 1, y: 0, dx: 1, dy: 0 },          // Top edge, excluding corners
+				{ x: width - 2, y: 0, dx: 1, dy: 0 },  // Bottom edge, excluding corners
+				{ x: 0, y: 1, dx: 0, dy: 1 },          // Left edge, excluding corners
+				{ x: width - 1, y: 1, dx: 0, dy: 1 }   // Right edge, excluding corners
+			];
+			// Randomly select an edge and search for a path cell to place the exit
+			while (true) {
+				const edge = edges[Math.floor(randomFunc() * edges.length)];
+				for (let i = 0; i < (edge.dx ? width - 2 : height - 2); i++) {
+					const x = edge.x + (edge.dx * i);
+					const y = edge.y + (edge.dy * i);
+					if (map[y][x] === 0) { // Check if the cell is a path
+						exitCell = { x, y };
+						return;
+					}
+				}
+			}
+		}
+
+		function startTimer() {
+			startTime = Date.now(); // Record the start time
+			timerInterval = setInterval(updateTimerDisplay, 1000); // Update every second
+		}
+
+		function stopTimer() {
+			clearInterval(timerInterval); // Stop updating the timer
+			updateTimerDisplay(); // Final display update when game ends
+			document.getElementById('timerDisplay').style.display = 'none';
+		}
+
+		function updateTimerDisplay() {		
+			if (!enableTimer) return;
+			const elapsedTime = Math.floor((Date.now() - startTime) / 1000); // Time in seconds
+			const minutes = Math.floor(elapsedTime / 60);
+			const seconds = elapsedTime % 60;
+			// Format the time display as "mm:ss"
+			const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;				
+			document.getElementById('timerDisplay').textContent = `Time: ${timeString}`;				
+		}
+		
+		// Resize canvas to full window size
+		function resizeCanvas() {
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+		}   
+
+		// Seeded random number generator (Mulberry32)
+		function seedRandom(seed) {
+			let strSeed = seed;
+			// Convert the seed string to a number
+			let h = 2166136261 >>> 0;
+			for (let i = 0; i < strSeed.length; i++) {
+				h = Math.imul(h ^ strSeed.charCodeAt(i), 16777619);
+			}
+			return function() {
+				h += h << 13; h ^= h >>> 17; h += h << 5;
+				return (h >>> 0) / 4294967296;
+			};
+		}
+
+		// Maze generation using recursive backtracking with seeded randomness
+		function generateRecursiveBacktracingMaze(width, height) {
+			// Start from an available cell (not marked as unavailable)
+			let stack = [];
+			let startX = 1, startY = 1;
+			do {
+				startX = 1 + 2 * Math.floor(randomFunc() * ((width - 1) / 2));
+				startY = 1 + 2 * Math.floor(randomFunc() * ((height - 1) / 2));
+			} while (map[startY][startX] >= 2); // Ensure start cell is not unavailable
+			let currentCell = { x: startX, y: startY };
+			map[currentCell.y][currentCell.x] = 0; // Mark the starting cell as a path
+			stack.push(currentCell);
+			// Main loop of the maze generation
+			while (stack.length > 0) {
+				let neighbors = getUnvisitedNeighbors(currentCell, width, height);
+				if (neighbors.length > 0) {
+					// Randomly choose one of the unvisited neighbors
+					let nextCell = neighbors[Math.floor(randomFunc() * neighbors.length)];
+					removeWall(currentCell, nextCell); // Remove the wall between the cells
+					map[nextCell.y][nextCell.x] = 0; // Mark the neighbor cell as a path
+					stack.push(nextCell);
+					currentCell = nextCell;
+				} else {
+					// Backtrack if no unvisited neighbors
+					currentCell = stack.pop();
+				}
+			}
+		}
+
+		// Updated helper function to get unvisited neighbors, ignoring unavailable cells
+		function getUnvisitedNeighbors(cell, width, height) {
+			let neighbors = [];
+			const directions = [
+				{ x: 0, y: -2 }, // Up
+				{ x: 2, y: 0 },  // Right
+				{ x: 0, y: 2 },  // Down
+				{ x: -2, y: 0 }  // Left
+			];
+			for (let dir of directions) {
+				let nx = cell.x + dir.x;
+				let ny = cell.y + dir.y;
+				// Only consider cells within bounds, that are real walls, and not marked as unavailable
+				if (
+					nx > 0 && ny > 0 && nx < width - 1 && ny < height - 1 &&
+					map[ny][nx] === 1 && map[ny][nx] < 2
+				) {
+					neighbors.push({ x: nx, y: ny });
+				}
+			}
+			return neighbors;
+		}
+
+		// Helper function to remove a wall between two adjacent cells
+		function removeWall(current, next) {
+			let x = (current.x + next.x) / 2;
+			let y = (current.y + next.y) / 2;
+			if (map[y][x] < 2) { // Only remove wall if it’s not marked as unavailable
+				map[y][x] = 0;
+			}
+		}
+		
+		// Generate maze using Prim's Algorithm
+		function generateMazePrim(width, height) {
+			// Start with an initial cell that is available
+			let startX, startY;
+			do {
+				startX = 1 + 2 * Math.floor(randomFunc() * ((width - 1) / 2));
+				startY = 1 + 2 * Math.floor(randomFunc() * ((height - 1) / 2));
+			} while (map[startY][startX] >= 2); // Ensure we start in an available cell
+			map[startY][startX] = 0; // Mark the starting cell as a path
+			const walls = [];
+			// Add the walls of the starting cell to the walls list
+			if (startX + 2 < width && map[startY][startX + 2] < 2) walls.push([startY, startX + 2, startY, startX + 1]);
+			if (startY + 2 < height && map[startY + 2][startX] < 2) walls.push([startY + 2, startX, startY + 1, startX]);
+			if (startX - 2 > 0 && map[startY][startX - 2] < 2) walls.push([startY, startX - 2, startY, startX - 1]);
+			if (startY - 2 > 0 && map[startY - 2][startX] < 2) walls.push([startY - 2, startX, startY - 1, startX]);
+			// Process the walls list
+			while (walls.length > 0) {
+				// Pick a random wall from the list
+				const randomIndex = Math.floor(randomFunc() * walls.length);
+				const [ny, nx, wy, wx] = walls.splice(randomIndex, 1)[0];
+				// Check if the neighboring cell is within bounds, is a wall, and not marked as unavailable
+				if (map[ny][nx] === 1 && map[ny][nx] < 2) {
+					map[ny][nx] = 0; // Make neighboring cell a path
+					map[wy][wx] = 0; // Remove the wall between cells
+					// Add the neighboring walls to the list, skipping unavailable cells
+					if (nx + 2 < width && map[ny][nx + 2] === 1 && map[ny][nx + 2] < 2) walls.push([ny, nx + 2, ny, nx + 1]);
+					if (nx - 2 > 0 && map[ny][nx - 2] === 1 && map[ny][nx - 2] < 2) walls.push([ny, nx - 2, ny, nx - 1]);
+					if (ny + 2 < height && map[ny + 2][nx] === 1 && map[ny + 2][nx] < 2) walls.push([ny + 2, nx, ny + 1, nx]);
+					if (ny - 2 > 0 && map[ny - 2][nx] === 1 && map[ny - 2][nx] < 2) walls.push([ny - 2, nx, ny - 1, nx]);
+				}
+			}
+		}
+
+		// Union-Find data structure for Kruskal's Algorithm
+		class UnionFind {
+			constructor(size) {
+				this.parent = Array.from({ length: size }, (_, i) => i);
+				this.rank = Array(size).fill(0);
+			}
+
+			find(x) {
+				if (this.parent[x] !== x) {
+					this.parent[x] = this.find(this.parent[x]); // Path compression
+				}
+				return this.parent[x];
+			}
+
+			union(x, y) {
+				const rootX = this.find(x);
+				const rootY = this.find(y);
+
+				if (rootX !== rootY) {
+					// Union by rank
+					if (this.rank[rootX] > this.rank[rootY]) {
+						this.parent[rootY] = rootX;
+					} else if (this.rank[rootX] < this.rank[rootY]) {
+						this.parent[rootX] = rootY;
+					} else {
+						this.parent[rootY] = rootX;
+						this.rank[rootX]++;
+					}
+				}
+			}
+		}
+
+		// Generate maze using Kruskal's Algorithm
+		function generateMazeKruskal(width, height) {  
+			const uf = new UnionFind(width * height); // Union-Find structure
+			const edges = []; // Store possible walls between cells
+			// Initialize cells and walls
+			for (let y = 1; y < height; y += 2) {
+				for (let x = 1; x < width; x += 2) {
+					if (map[y][x] >= 2) continue; // Skip unavailable cells
+
+					map[y][x] = 0; // Mark cell as a path
+
+					// Right wall (if within bounds and not unavailable)
+					if (x + 2 < width && map[y][x + 2] < 2) {
+						edges.push([[y, x], [y, x + 2], [y, x + 1]]);
+					}
+					// Bottom wall (if within bounds and not unavailable)
+					if (y + 2 < height && map[y + 2][x] < 2) {
+						edges.push([[y, x], [y + 2, x], [y + 1, x]]);
+					}
+				}
+			}
+			// Randomly shuffle the edges for randomness
+			for (let i = edges.length - 1; i > 0; i--) {
+				const j = Math.floor(randomFunc() * (i + 1));
+				[edges[i], edges[j]] = [edges[j], edges[i]];
+			}
+			// Process each edge to generate the maze
+			edges.forEach(([cell1, cell2, wall]) => {
+				const [y1, x1] = cell1;
+				const [y2, x2] = cell2;
+				const [wy, wx] = wall;
+				// Skip if either cell is unavailable
+				if (map[y1][x1] >= 2 || map[y2][x2] >= 2) return;
+				const cell1Index = y1 * width + x1;
+				const cell2Index = y2 * width + x2;
+				// Only connect cells in different sets
+				if (uf.find(cell1Index) !== uf.find(cell2Index)) {
+					uf.union(cell1Index, cell2Index); // Merge sets
+					map[wy][wx] = 0; // Remove wall between cells to create a path
+				}
+			});
+		}
+
+		// Generate maze using Ellers's Algorithm
+		function generateMazeEller(width, height) {
+			let nextSetId = 1; // Track the next available unique set ID
+			let currentRowSets = []; // To hold the set IDs of the current row
+			// Process each row, skipping unavailable cells
+			for (let y = 1; y < height - 2; y += 2) {
+				// Initialize the current row with unique sets, skipping unavailable cells
+				for (let x = 1; x < width; x += 2) {
+					if (map[y][x] < 2) { // Only process available cells
+						if (!currentRowSets[Math.floor(x / 2)]) {
+							currentRowSets[Math.floor(x / 2)] = nextSetId++;
+						}
+						map[y][x] = 0; // Make each available cell a passage
+					}
+				}
+				// 1. Create horizontal connections within the row, avoiding left edge (x=1)
+				for (let x = 1; x < width - 2; x += 2) {
+					if (map[y][x] < 2 && map[y][x + 2] < 2) { // Ensure both cells are available
+						if (currentRowSets[Math.floor(x / 2)] !== currentRowSets[Math.floor((x + 2) / 2)] && randomFunc() > 0.5) {
+							// Merge sets by making a horizontal connection
+							map[y][x + 1] = 0;
+							const oldSet = currentRowSets[Math.floor((x + 2) / 2)];
+							const newSet = currentRowSets[Math.floor(x / 2)];
+							for (let i = 0; i < currentRowSets.length; i++) {
+								if (currentRowSets[i] === oldSet) {
+									currentRowSets[i] = newSet;
+								}
+							}
+						}
+					}
+				}
+				// 2. Prepare for the next row by creating vertical connections, avoiding bottom edge (y=height-2)
+				const nextRowSets = Array(currentRowSets.length).fill(0);
+				for (let x = 1; x < width; x += 2) {
+					const set = currentRowSets[Math.floor(x / 2)];
+					const inNextRow = nextRowSets.includes(set);
+					if (map[y][x] < 2 && y + 2 < height - 2 && map[y + 2][x] < 2) { // Avoid bottom edge cells
+						if (!inNextRow || randomFunc() > 0.5) {
+							// Make a vertical connection
+							map[y + 1][x] = 0;
+							nextRowSets[Math.floor(x / 2)] = set;
+						}
+						if (!inNextRow) nextRowSets[Math.floor(x / 2)] = set; // Ensure each set is represented
+					}
+				}
+
+				// Update the sets for the next row
+				currentRowSets = nextRowSets.map((set, i) => set || nextSetId++);
+			}
+			// 3. Selectively connect cells in the last row to ensure all sets are linked
+			for (let x = 1; x < width - 2; x += 2) {
+				if (map[height - 2][x] < 2 && map[height - 2][x + 2] < 2) { // Ensure cells are available
+					const set1 = currentRowSets[Math.floor(x / 2)];
+					const set2 = currentRowSets[Math.floor((x + 2) / 2)];
+					if (set1 !== set2) {
+						map[height - 2][x + 1] = 0; // Create a connection to link sets
+						currentRowSets = currentRowSets.map(set => (set === set2 ? set1 : set)); // Merge sets in the last row
+					}
+				}
+			}
+			// Ensure the exit remains accessible if within the available cells
+			if (map[height - 2][width - 2] < 2) {
+				map[height - 2][width - 2] = 0; // Exit cell
+				if (map[height - 2][width - 3] < 2) {
+					map[height - 2][width - 3] = 0; // Clear the path to the exit
+				}
+			}
+		}
+
+		// Generate maze using Recursive Division Algorithm
+		function startRecursiveDivision(width, height) {	  
+			// Create an outer wall with paths inside, avoiding unavailable cells
+			for (let y = 1; y < height - 1; y++) {
+				for (let x = 1; x < width - 1; x++) {
+					if (map[y][x] < 2) {
+						map[y][x] = 0; // 0 represents a path
+					}
+				}
+			}
+			// Begin recursive division in the available area
+			generateMazeRecursiveDivision(1, 1, width - 2, height - 2);
+		}
+
+		function generateMazeRecursiveDivision(x, y, width, height) {
+			// Base case: Stop dividing when the region is too small
+			if (width <= 2 || height <= 2) return;
+			// Determine whether to divide horizontally or vertically
+			const horizontal = width < height || (width === height && randomFunc() < 0.5);
+			if (horizontal) {
+				// Attempt to place a horizontal wall
+				let wallY;
+				let foundValidWall = false;
+				// Find a row for the wall that has at least one available cell
+				for (let attempt = 0; attempt < height - 2; attempt++) {
+					wallY = y + Math.floor(randomFunc() * ((height - 2) / 2)) * 2 + 1;
+					if (map[wallY] && map[wallY].some((cell, idx) => idx >= x && idx < x + width && cell < 2)) {
+						foundValidWall = true;
+						break;
+					}
+				}			
+				// If no valid wall row was found, return to avoid infinite recursion
+				if (!foundValidWall) return;
+				// Place the wall, avoiding unavailable cells
+				for (let i = x; i < x + width; i++) {
+					if (map[wallY][i] < 2) map[wallY][i] = 1; // Set as a real wall
+				}
+				// Attempt to place a passage in an available cell on the wall line
+				let passageX;
+				let foundValidPassage = false;
+				for (let attempt = 0; attempt < width; attempt++) {
+					passageX = x + Math.floor(randomFunc() * (width / 2)) * 2;
+					if (map[wallY][passageX] < 2) {
+						foundValidPassage = true;
+						break;
+					}
+				}			
+				// If no valid passage was found, clear the wall and exit
+				if (foundValidPassage) {
+					map[wallY][passageX] = 0; // Set passage as a path
+				} else {
+					for (let i = x; i < x + width; i++) {
+						if (map[wallY][i] === 1) map[wallY][i] = 0; // Clear the wall if no passage is possible
+					}
+					return;
+				}
+				// Recursively divide the area above and below the horizontal wall
+				generateMazeRecursiveDivision(x, y, width, wallY - y);
+				generateMazeRecursiveDivision(x, wallY + 1, width, y + height - wallY - 1);
+			} else {
+				// Attempt to place a vertical wall
+				let wallX;
+				let foundValidWall = false;
+
+				// Find a column for the wall that has at least one available cell
+				for (let attempt = 0; attempt < width - 2; attempt++) {
+					wallX = x + Math.floor(randomFunc() * ((width - 2) / 2)) * 2 + 1;
+					if (map.some((row, idx) => idx >= y && idx < y + height && row[wallX] < 2)) {
+						foundValidWall = true;
+						break;
+					}
+				}			
+				// If no valid wall column was found, return to avoid infinite recursion
+				if (!foundValidWall) return;
+				// Place the wall, avoiding unavailable cells
+				for (let i = y; i < y + height; i++) {
+					if (map[i][wallX] <2) map[i][wallX] = 1; // Set as a real wall
+				}
+				// Attempt to place a passage in an available cell on the wall line
+				let passageY;
+				let foundValidPassage = false;
+
+				for (let attempt = 0; attempt < height; attempt++) {
+					passageY = y + Math.floor(randomFunc() * (height / 2)) * 2;
+					if (map[passageY][wallX] < 2) {
+						foundValidPassage = true;
+						break;
+					}
+				}			
+				// If no valid passage was found, clear the wall and exit
+				if (foundValidPassage) {
+					map[passageY][wallX] = 0; // Set passage as a path
+				} else {
+					for (let i = y; i < y + height; i++) {
+						if (map[i][wallX] === 1) map[i][wallX] = 0; // Clear the wall if no passage is possible
+					}
+					return;
+				}
+				// Recursively divide the area to the left and right of the vertical wall
+				generateMazeRecursiveDivision(x, y, wallX - x, height);
+				generateMazeRecursiveDivision(wallX + 1, y, x + width - wallX - 1, height);
+			}
+		}
+
+		function generateMazeBinaryTree(width, height) {			
+			// Carve out paths using the Binary Tree algorithm
+			for (let y = 1; y < height; y += 2) {
+				for (let x = 1; x < width; x += 2) {
+					map[y][x] = 0; // Make each cell a path
+					// Randomly carve either east or south
+					if (randomFunc() > 0.5 && x + 2 < width) {
+						map[y][x + 1] = 0; // Carve east if possible
+					} else if (y + 2 < height) {
+						map[y + 1][x] = 0; // Carve south if east is not possible
+					}
+				}
+			}
+			// Final pass to ensure connectivity
+			connectUnvisitedCells(width, height);
+		}
+
+		// Helper function to connect unvisited cells
+		function connectUnvisitedCells(width, height) {
+			// Perform a depth-first search (DFS) from the starting cell to mark reachable cells
+			const visited = Array.from({ length: height }, () => Array(width).fill(false));
+			const stack = [[1, 1]]; // Start from (1,1)
+			while (stack.length > 0) {
+				const [y, x] = stack.pop();
+				visited[y][x] = true;
+				// Push neighboring cells to the stack if they are paths and not visited
+				[[0, 1], [1, 0], [0, -1], [-1, 0]].forEach(([dy, dx]) => {
+					const ny = y + dy;
+					const nx = x + dx;
+					if (ny > 0 && nx > 0 && ny < height - 1 && nx < width - 1 && map[ny][nx] === 0 && !visited[ny][nx]) {
+						stack.push([ny, nx]);
+					}
+				});
+			}
+
+			// Connect any unreachable cells to the nearest reachable cell
+			for (let y = 1; y < height; y += 2) {
+				for (let x = 1; x < width; x += 2) {
+					if (!visited[y][x]) {
+						// Find a reachable neighbor to connect this cell to
+						const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+						for (const [dy, dx] of directions) {
+							const ny = y + dy;
+							const nx = x + dx;
+							if (ny > 0 && nx > 0 && ny < height - 1 && nx < width - 1 && visited[ny][nx]) {
+								map[(y + ny) / 2][(x + nx) / 2] = 0; // Open a wall between them
+								visited[y][x] = true; // Mark this cell as reachable
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Generate maze using Aldous Broder Algorithm
+		function generateMazeAldousBroder(width, height) {	 
+			// Calculate the total number of available cells
+			let totalCells = 0;
+			for (let y = 1; y < height; y += 2) {
+				for (let x = 1; x < width; x += 2) {
+					if (map[y][x] < 2) totalCells++;
+				}
+			}
+			// Choose a random starting cell that is not unavailable
+			let x, y;
+			do {
+				x = 1 + 2 * Math.floor(randomFunc() * ((width - 1) / 2));
+				y = 1 + 2 * Math.floor(randomFunc() * ((height - 1) / 2));
+			} while (map[y][x] >= 2); // Ensure we start in an available cell
+			map[y][x] = 0; // Mark the starting cell as a path
+			let visitedCells = 1;
+			// Perform the random walk
+			while (visitedCells < totalCells) {
+				// Pick a random direction
+				const directions = [
+					[0, 2],  // Right
+					[0, -2], // Left
+					[2, 0],  // Down
+					[-2, 0]  // Up
+				];
+				const [dx, dy] = directions[Math.floor(randomFunc() * directions.length)];
+				// Calculate the new cell coordinates
+				const nx = x + dx;
+				const ny = y + dy;
+				// Check if the new cell is within bounds and not unavailable
+				if (nx > 0 && ny > 0 && nx < width && ny < height && map[ny][nx] < 2) {
+					// If the new cell is a wall (unvisited), carve a path to it
+					if (map[ny][nx] === 1) {
+						map[ny][nx] = 0; // Mark new cell as a path
+						map[y + dy / 2][x + dx / 2] = 0; // Remove wall between current and new cell
+						visitedCells++;
+					}
+					// Move to the new cell, even if it was already visited
+					x = nx;
+					y = ny;
+				} else {
+					// Find a new starting cell if the path is blocked
+					let foundNewStart = false;
+					for (let row = 1; row < height; row += 2) {
+						for (let col = 1; col < width; col += 2) {
+							if (map[row][col] === 1 && map[row][col] < 2) {
+								x = col;
+								y = row;
+								foundNewStart = true;
+								break;
+							}
+						}
+						if (foundNewStart) break;
+					}
+					// If no new starting cell is found, break the loop
+					if (!foundNewStart) break;
+				}
+			}
+		}
+
+		// Generate maze using Wilson's Algorithm
+		function generateMazeWilson(width, height) {		
+			// Start with an initial cell in the maze that is not marked as unavailable
+			let startX = 1, startY = 1;
+			while (map[startY][startX] >= 2) { // Ensure we start in an available cell
+				startX = 1 + 2 * Math.floor(randomFunc() * ((width - 1) / 2));
+				startY = 1 + 2 * Math.floor(randomFunc() * ((height - 1) / 2));
+			}
+			map[startY][startX] = 0; // Mark the starting cell as a path
+			const inMaze = new Set();
+			inMaze.add(`${startY},${startX}`);
+			// Perform loop-erased random walks for all unvisited cells
+			for (let y = 1; y < height; y += 2) {
+				for (let x = 1; x < width; x += 2) {
+					if (map[y][x] === 1 && map[y][x] < 2 && !inMaze.has(`${y},${x}`)) {
+						let path = [[y, x]];
+						// Perform a random walk until reaching a cell already in the maze
+						while (!inMaze.has(`${path[path.length - 1][0]},${path[path.length - 1][1]}`)) {
+							const [cy, cx] = path[path.length - 1];
+							const neighbors = [];
+							// Add only neighbors that are within bounds and not marked as unavailable
+							if (cy > 1 && map[cy - 2][cx] < 2) neighbors.push([cy - 2, cx]); // Up
+							if (cy < height - 2 && map[cy + 2][cx] < 2) neighbors.push([cy + 2, cx]); // Down
+							if (cx > 1 && map[cy][cx - 2] < 2) neighbors.push([cy, cx - 2]); // Left
+							if (cx < width - 2 && map[cy][cx + 2] < 2) neighbors.push([cy, cx + 2]); // Right
+
+							if (neighbors.length === 0) break; // Dead-end, exit the loop
+
+							const [ny, nx] = neighbors[Math.floor(randomFunc() * neighbors.length)];
+
+							// Check for loops in the path and erase if necessary
+							const loopIndex = path.findIndex(([py, px]) => py === ny && px === nx);
+							if (loopIndex !== -1) {
+								path = path.slice(0, loopIndex + 1); // Erase the loop
+							} else {
+								path.push([ny, nx]); // Add new cell to the path
+							}
+						}
+						// Add the loop-erased path to the maze
+						for (let i = 0; i < path.length; i++) {
+							const [py, px] = path[i];
+							map[py][px] = 0; // Mark cell as a path
+							inMaze.add(`${py},${px}`);
+							// If not the first cell in the path, remove the wall between cells
+							if (i > 0) {
+								const [prevY, prevX] = path[i - 1];
+								map[(py + prevY) / 2][(px + prevX) / 2] = 0; // Remove wall
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		// Generate maze using Hunt and Kill Algorithm
+		function generateMazeHuntAndKill(width, height) {
+			// Start at a random cell that is available
+			let x, y;
+			do {
+				x = 1 + 2 * Math.floor(randomFunc() * ((width - 1) / 2));
+				y = 1 + 2 * Math.floor(randomFunc() * ((height - 1) / 2));
+			} while (map[y][x] >= 2); // Ensure we start in an available cell
+			map[y][x] = 0; // Mark the starting cell as a path
+			// Hunt-and-Kill main loop
+			while (true) {
+				const neighbors = [];
+				// Check each direction for a wall that can be converted to a path and is not unavailable
+				if (y > 1 && map[y - 2][x] === 1 && map[y - 1][x] < 2) neighbors.push([y - 2, x, y - 1, x]); // Up
+				if (y < height - 2 && map[y + 2][x] === 1 && map[y + 1][x] < 2) neighbors.push([y + 2, x, y + 1, x]); // Down
+				if (x > 1 && map[y][x - 2] === 1 && map[y][x - 1] < 2) neighbors.push([y, x - 2, y, x - 1]); // Left
+				if (x < width - 2 && map[y][x + 2] === 1 && map[y][x + 1] < 2) neighbors.push([y, x + 2, y, x + 1]); // Right
+				if (neighbors.length > 0) {
+					// Choose a random neighbor to move to
+					const [ny, nx, wy, wx] = neighbors[Math.floor(randomFunc() * neighbors.length)];
+					map[ny][nx] = 0; // Mark the neighbor cell as a path
+					map[wy][wx] = 0; // Remove the wall between the current cell and the neighbor
+					// Move to the chosen cell
+					y = ny;
+					x = nx;
+				} else {
+					// Hunt phase: look for an unvisited cell next to a visited cell
+					let found = false;
+					for (let row = 1; row < height; row += 2) {
+						for (let col = 1; col < width; col += 2) {
+							if (map[row][col] === 1 && map[row][col] < 2) { // Only consider real walls, not unavailable cells
+								const huntNeighbors = [];
+								// Check each direction for visited neighbors and ensure cells aren't unavailable
+								if (row > 1 && map[row - 2][col] === 0 && map[row - 1][col] < 2) huntNeighbors.push([row - 2, col, row - 1, col]);
+								if (row < height - 2 && map[row + 2][col] === 0 && map[row + 1][col] <2) huntNeighbors.push([row + 2, col, row + 1, col]);
+								if (col > 1 && map[row][col - 2] === 0 && map[row][col - 1] < 2) huntNeighbors.push([row, col - 2, row, col - 1]);
+								if (col < width - 2 && map[row][col + 2] === 0 && map[row][col + 1] < 2) huntNeighbors.push([row, col + 2, row, col + 1]);
+								if (huntNeighbors.length > 0) {
+									const [ny, nx, wy, wx] = huntNeighbors[Math.floor(randomFunc() * huntNeighbors.length)];
+									map[row][col] = 0; // Mark hunted cell as a path
+									map[wy][wx] = 0; // Remove wall to connect it to the maze
+									// Move to this cell and continue the walk phase
+									y = row;
+									x = col;
+									found = true;
+									break;
+								}
+							}
+						}
+						if (found) break;
+					}
+					// If no unvisited cells were found, the maze is complete
+					if (!found) break;
+				}
+			}
+		}
+
+		function generateMazeGrowingTree(width, height) {    
+			// Start from a random cell that is available
+			let startX, startY;
+			do {
+				startX = 1 + 2 * Math.floor(randomFunc() * ((width - 1) / 2));
+				startY = 1 + 2 * Math.floor(randomFunc() * ((height - 1) / 2));
+			} while (map[startY][startX] >= 2); // Ensure starting cell is not unavailable
+			map[startY][startX] = 0; // Mark the starting cell as a path
+			const cells = [[startY, startX]]; // List to hold cells in the maze
+			// Growing Tree algorithm loop
+			while (cells.length > 0) {
+				// Choose the current cell from the list (can pick last, random, etc.)
+				const index = randomFunc() > 0.5 ? cells.length - 1 : Math.floor(randomFunc() * cells.length);
+				const [y, x] = cells[index];
+				// Find unvisited neighbors that are not marked as unavailable (two cells away to form walls in between)
+				const neighbors = [];
+				if (y > 1 && map[y - 2][x] === 1 && map[y - 1][x] < 2) neighbors.push([y - 2, x, y - 1, x]); // Up
+				if (y < height - 2 && map[y + 2][x] === 1 && map[y + 1][x] < 2) neighbors.push([y + 2, x, y + 1, x]); // Down
+				if (x > 1 && map[y][x - 2] === 1 && map[y][x - 1] < 2) neighbors.push([y, x - 2, y, x - 1]); // Left
+				if (x < width - 2 && map[y][x + 2] === 1 && map[y][x + 1] < 2) neighbors.push([y, x + 2, y, x + 1]); // Right
+				if (neighbors.length > 0) {
+					// Randomly choose one of the unvisited neighbors
+					const [ny, nx, wy, wx] = neighbors[Math.floor(randomFunc() * neighbors.length)];
+					// Carve a path to the chosen neighbor
+					map[ny][nx] = 0; // Mark the neighbor cell as a path
+					map[wy][wx] = 0; // Remove the wall between cells
+					// Add the neighbor cell to the list
+					cells.push([ny, nx]);
+				} else {
+					// No unvisited neighbors; remove the current cell from the list
+					cells.splice(index, 1);
+				}
+			}
+		}
+
+		function getUnvisitedNeighbors(cell, width, height) {
+			let neighbors = [];
+			let directions = [
+				{ x: 0, y: -2 }, // Up
+				{ x: 2, y: 0 },  // Right
+				{ x: 0, y: 2 },  // Down
+				{ x: -2, y: 0 }  // Left
+			];
+			for (let dir of directions) {
+				let nx = cell.x + dir.x;
+				let ny = cell.y + dir.y;
+				if (nx > 0 && ny > 0 && nx < width - 1 && ny < height - 1 && map[ny][nx] === 1) {
+					neighbors.push({ x: nx, y: ny });
+				}
+			}
+			return neighbors;
+		}
+
+		function removeWall(current, next) {
+			let x = (current.x + next.x) / 2;
+			let y = (current.y + next.y) / 2;
+			map[y][x] = 0;
+		}
+		
+		function drawCompass(ctx, angle) {
+			// Compass settings
+			const compassWidth = 620;
+			const compassHeight = 60;
+			const compassX = canvas.width / 2;
+			const compassY = 60; // Position the compass slightly below the top center
+			// Cardinal and intermediate directions
+			const directions = ["N", ".", "E", ".", "S", ".", "W", "."];
+			const directionsAngle = [0, 45, 90, 135, 180, 225, 270, 315];
+			// Convert player angle from radians to degrees, normalize to 0-360
+			const angleDeg = (angle * (180 / Math.PI) + 360) % 360;
+			// Draw an ellipse arc for the compass background
+			ctx.beginPath();
+			ctx.ellipse(compassX, compassY, compassWidth / 2, compassHeight / 2, 0, Math.PI, 2 * Math.PI);
+			ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+			ctx.fill();
+			// Draw each direction
+			ctx.fillStyle = 'white';
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			directions.forEach((dir, i) => {
+				const dirAngle = directionsAngle[i];
+				// Calculate the offset from the player's current angle
+				const angleDiff = ((dirAngle - angleDeg + 360) % 360) - 180; // Centered on player's facing angle
+				// Only draw directions that are within the visible arc (e.g., -90 to 90 degrees)
+				if (angleDiff > -185 && angleDiff < 5) {
+					// Calculate the position on the top of the elliptical arc based on angleDiff
+					const displayAngle = (angleDiff + 90) * (Math.PI / 180); // Shift so 0 degrees is at top center
+					const textX = compassX + (compassWidth / 2) * Math.sin(displayAngle);
+					const textY = compassY - (compassHeight / 2) * Math.cos(displayAngle);
+					// Adjust font size for main cardinal points
+					ctx.font = (i === 0) ? '16px Arial' : '12px Arial';
+					ctx.fillStyle = (i === 0) ? 'lime' : 'white';
+					ctx.fillText(dir, textX, textY);
+				}
+			});
+			// Draw a central marker to show the player's facing direction
+			ctx.beginPath();
+			ctx.moveTo(compassX, compassY - compassHeight / 2 + 7);
+			ctx.lineTo(compassX, compassY - compassHeight / 2 + 20);
+			ctx.strokeStyle = 'red';
+			ctx.lineWidth = 3;
+			ctx.stroke();
+		}
+		
+		function gameLoop() {
+			update();
+			render();
+			window.requestAnimationFrame(gameLoop);
+		}
+
+		function update() {
+			if (gameEnded) return; // Stop updating if the game has ended
+			if (keys['ArrowLeft'] || keys['a']) {
+				player.angle -= rotateSpeed;		}
+			if (keys['ArrowRight'] || keys['d']) {
+				player.angle += rotateSpeed;
+			}
+			let moveStep = 0;
+			if (keys['ArrowUp'] || keys['w']) {
+				moveStep = moveSpeed;
+			}
+			if (keys['ArrowDown'] || keys['s']) {
+				moveStep = -moveSpeed;
+			}
+			let newX = player.x + Math.cos(player.angle) * moveStep * 0.1;
+			let newY = player.y + Math.sin(player.angle) * moveStep * 0.1;		
+			// Check collision on the X-axis and allow sliding on Y if blocked
+			if (map[Math.floor(player.y)][Math.floor(newX)] === 0) {
+				player.x = newX;
+			}
+			// Check collision on the Y-axis and allow sliding on X if blocked
+			if (map[Math.floor(newY)][Math.floor(player.x)] === 0) {
+				player.y = newY;
+			}		
+			visitedCells[Math.floor(newY)][Math.floor(newX)] = true;
+			// Check if player has reached the exit cell
+			if (Math.floor(player.x) === exitCell.x && Math.floor(player.y) === exitCell.y) {
+					endGame(true);		
+			}
+		}
+
+		function render() {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			// Draw ceiling and floor
+			ctx.fillStyle = '#888';
+			ctx.fillRect(0, 0, canvas.width, canvas.height / 2); // Ceiling
+			ctx.fillStyle = '#444';
+			ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2); // Floor
+			// Ray casting for each vertical slice
+			let previousDistance = null;
+			let previousWallTopY = null;
+			let previousWallBottomY = null;		
+			for (let x = 0; x < canvas.width; x++) {
+				let rayAngle = (player.angle - FOV / 2) + (x / canvas.width) * FOV;
+				let distance = castRay(rayAngle);
+				let lineHeight = (canvas.height / distance) * 0.5;
+				// Adjust brightness based on distance to simulate depth
+				let brightness = 1 / (distance * 0.22);
+				if (brightness > 1 || !showDepth) brightness = 1;			
+				ctx.fillStyle = adjustBrightness(wallColor, brightness);
+				// Calculate y-position for top and bottom of wall slice
+				let wallTopY = (canvas.height / 2) - lineHeight / 2;
+				let wallBottomY = (canvas.height / 2) + lineHeight / 2;
+				// Draw the wall slice
+				ctx.fillRect(x, wallTopY, 1, lineHeight);
+				// Draw edge lines where walls meet floor/ceiling
+				if (showEdgeLines) {
+					ctx.fillStyle = '#000'; // Edge line color
+					// Draw top edge (where wall meets ceiling)
+					ctx.fillRect(x, wallTopY - 1, 1, 1);
+					// Draw bottom edge (where wall meets floor)
+					ctx.fillRect(x, wallBottomY, 1, 1);
+					// Draw vertical edge line between two wall segments at curves or corners
+					if (previousDistance !== null) {
+						let distanceDifference = Math.abs(distance - previousDistance);
+						// If distance difference exceeds threshold, it indicates a curve or corner
+						if (distanceDifference > 0.3) { // Threshold for detecting significant curve
+							ctx.fillStyle = '#000'; // Edge line color
+							// Check if this is a left or right curve
+							if (distance > previousDistance) {
+								// Right curve: Draw line on x - 1 (previous slice), matching previous wall height
+								ctx.fillRect(x - 1, previousWallTopY, 1, previousWallBottomY - previousWallTopY);
+							} else {
+								// Left curve: Draw line on x (current slice), matching current wall height
+								ctx.fillRect(x, wallTopY, 1, lineHeight);
+							}
+						}
+					}
+					// Update previous distance and wall top/bottom for the next iteration
+					previousDistance = distance;
+					previousWallTopY = wallTopY;
+					previousWallBottomY = wallBottomY;
+				}
+			}
+			// Draw the minimap if enabled
+			if (showMinimap) drawMinimap();
+			if (showCompass) drawCompass(ctx, player.angle);
+		}
+		
+		function isFacingWall(player) {
+			const frontX = Math.floor(player.x + Math.cos(player.angle));
+			const frontY = Math.floor(player.y + Math.sin(player.angle));
+			return map[frontY] && map[frontY][frontX] === 1;
+		}
+
+		function endGame(playerCompleted = false) {
+			gameEnded = true; // Set gameEnded to true to stop further updates		
+			stopTimer();		
+			 // Hide the "End Game" button
+			if (playerCompleted && enableTimer) {
+				const elapsedTime = Math.floor((Date.now() - startTime) / 1000); // Time in seconds
+				const minutes = Math.floor(elapsedTime / 60);
+				const seconds = elapsedTime % 60;
+				const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+				alert(`Congratulations! You completed the maze in ${timeString}.`);
+			} else if (playerCompleted) {
+				alert("Congratulations! You completed the maze.");
+			}
+			location.reload();
+		}
+
+		document.getElementById('endGameButton').addEventListener('click', () => {
+			const confirmEnd = confirm("Are you sure you want to end the game?");
+			if (confirmEnd) {
+				endGame(); // Only call endGame if the user confirms
+			}
+		});
+
+		function isExteriorWall(map, cell) {
+			const { x, y } = cell;
+			if (map[y][x] !== 1) return false; // Must be a wall
+			const directions = [
+				{ dx: 0, dy: -1 }, // Up
+				{ dx: 0, dy: 1 },  // Down
+				{ dx: -1, dy: 0 }, // Left
+				{ dx: 1, dy: 0 }   // Right
+			];
+			let hasAvailableNeighbor = false;
+			let hasUnavailableNeighborOrEdge = false;
+			for (const { dx, dy } of directions) {
+				const nx = x + dx;
+				const ny = y + dy;
+				if (nx >= 0 && ny >= 0 && ny < map.length && nx < map[0].length) {
+					if (map[ny][nx] === 0) {
+						hasAvailableNeighbor = true;
+					} else if (map[ny][nx] === 2) {
+						hasUnavailableNeighborOrEdge = true;
+					}
+				} else {
+					hasUnavailableNeighborOrEdge = true; // Edge of the map
+				}
+			}
+			return hasAvailableNeighbor && hasUnavailableNeighborOrEdge;
+		}
+
+		// Function to find all available cells (passable cells) in the maze
+		function getAvailableCellsForExit(map) {
+			const availableCells = [];
+			for (let y = 0; y < map.length; y++) {
+				for (let x = 0; x < map[y].length; x++) {
+					if (isExteriorWall(map, {x, y})) { // Assuming 0 represents an empty ce
+						availableCells.push({ x, y });										
+					}
+				}
+			}
+			return availableCells;
+		}
+		
+		function calculateMaxPossibleDistance(map) {
+			let dist = 0;
+			let maxDist = 0;
+			let first = true;
+			let bx
+			let by
+			const availableCells = [];
+			for (let y = 0; y < map.length; y++) {
+				for (let x = 0; x < map[y].length; x++) {
+					if (isExteriorWall(map, {x, y})) { // Assuming 0 represents an empty ce
+						if (first) {
+							first = false;
+							bx = x;
+							by = y;
+						}
+						dist = Math.abs(x - bx) + Math.abs(y - by);
+						if (dist > maxDist) maxDist = dist;						
+					}
+				}
+			}
+			return maxDist;
+		}
+
+		// Function to calculate the Manhattan distance between two cells
+		function calculateDistance(cell1, cell2) {
+			return Math.abs(cell1.x - cell2.x) + Math.abs(cell1.y - cell2.y);
+		}
+
+		// Function to determine start and end positions with a minimum distance constraint
+		function getStartAndEndPositions(map, minDistanceRatio) {		
+			const availableCells = getAvailableCellsForExit(map);
+			if (availableCells.length < 2) {
+				throw new Error("Not enough available cells to set start and end positions.");
+			}
+			// Estimate the longest path by calculating the approximate diagonal distance
+			const maxPossibleDistance = calculateMaxPossibleDistance(map);
+			const minDistance = maxPossibleDistance * minDistanceRatio;
+			let start, end, distance;
+			// Try to find two cells that satisfy the minimum distance requirement
+			do {
+				start = availableCells[Math.floor(randomFunc() * availableCells.length)];
+				end = availableCells[Math.floor(randomFunc() * availableCells.length)];
+				distance = calculateDistance(start, end);
+			} while (distance < minDistance);
+			return { start, end };
+		}
+
+		// Draw minimap showing player position and direction
+		function drawMinimap() {    
+			const cellSize = minimapSize / Math.max(map.length, map[0].length); // Scale to fit the entire maze
+			// Position the minimap in the top-left corner
+			const minimapX = 10;
+			const minimapY = 10;
+			for (let y = 0; y < map.length; y++) {
+				for (let x = 0; x < map[y].length; x++) {
+					if (map[y][x] >= 2) continue; // Skip rendering unavailable cells
+					if (fogOfWar) {
+						 if (map[y][x] >= 2) continue; // Skip rendering unavailable cells
+						// Apply fog of war: show only visited paths and adjacent walls (including diagonals)
+						if (visitedCells[y][x]) {
+							// Draw visited paths
+							ctx.fillStyle = '#ccc';
+							ctx.fillRect(minimapX + x * cellSize, minimapY + y * cellSize, cellSize, cellSize);
+							// Show walls surrounding visited cells, including diagonals
+							const neighbors = [
+								[y - 1, x],     [y + 1, x],     // Above and below
+								[y, x - 1],     [y, x + 1],     // Left and right
+								[y - 1, x - 1], [y - 1, x + 1], // Top-left and top-right diagonals
+								[y + 1, x - 1], [y + 1, x + 1]  // Bottom-left and bottom-right diagonals
+							];
+							neighbors.forEach(([ny, nx]) => {
+								if (map[ny] && map[ny][nx] === 1) {
+									ctx.fillStyle = '#000';
+									ctx.fillRect(minimapX + nx * cellSize, minimapY + ny * cellSize, cellSize, cellSize);
+								}
+							});
+						}
+					} else {
+						// No fog of war: show entire maze layout
+						ctx.fillStyle = map[y][x] === 1 ? '#000' : '#ccc';
+						ctx.fillRect(minimapX + x * cellSize, minimapY + y * cellSize, cellSize, cellSize);
+					}
+				}
+			}
+			// Draw player position on the minimap
+			const playerXOnMap = minimapX + player.x * cellSize;
+			const playerYOnMap = minimapY + player.y * cellSize;
+			// Draw player as a small circle
+			ctx.fillStyle = '#00f'; // Player color
+			ctx.beginPath();
+			ctx.arc(playerXOnMap, playerYOnMap, cellSize / 4, 0, 2 * Math.PI);
+			ctx.fill();
+			// Draw player direction as a line
+			const directionLineLength = cellSize / 2;
+			ctx.strokeStyle = '#00f';
+			ctx.beginPath();
+			ctx.moveTo(playerXOnMap, playerYOnMap);
+			ctx.lineTo(
+				playerXOnMap + Math.cos(player.angle) * directionLineLength,
+				playerYOnMap + Math.sin(player.angle) * directionLineLength
+			);
+			ctx.stroke();
+			 // Determine the color for the exit (green by default, or black if it matches wall color)
+			let exitColor = '#00FF00'; // Green
+			if (exitColor.toLowerCase() === wallColor.toLowerCase()) {
+				exitColor = '#000000'; // Black if wall color is green
+			}
+			// Draw exit cell as "X" if fog-of-war is on and showExit is enabled
+			if (!fogOfWar || showExit) {
+				const exitXOnMap = minimapX + exitCell.x * cellSize;
+				const exitYOnMap = minimapY + exitCell.y * cellSize;
+				ctx.strokeStyle = exitColor; // Exit color
+
+				// Draw an "X" at the exit position
+				ctx.beginPath();
+				ctx.moveTo(exitXOnMap, exitYOnMap);
+				ctx.lineTo(exitXOnMap + cellSize, exitYOnMap + cellSize);
+				ctx.moveTo(exitXOnMap + cellSize, exitYOnMap);
+				ctx.lineTo(exitXOnMap, exitYOnMap + cellSize);
+				ctx.stroke();
+			}
+		}
+
+		function castRay(angle) {
+			let sin = Math.sin(angle);
+			let cos = Math.cos(angle);
+			let distance = 0;
+			let hit = false;
+			// Calculate map width and height based on the array dimensions
+			const height = map.length;
+			const width = map[0].length;
+			while (!hit && distance < 20) {
+				distance += 0.01;
+				let testX = player.x + cos * distance;
+				let testY = player.y + sin * distance;
+				// Check if the ray is out of bounds
+				if (
+					Math.floor(testX) < 0 || Math.floor(testX) >= width ||
+					Math.floor(testY) < 0 || Math.floor(testY) >= height
+				) {
+					return 20; // Stop casting as ray is out of bounds
+				}
+				// Check for wall or unavailable cell
+				const cellValue = map[Math.floor(testY)][Math.floor(testX)];
+				if (cellValue === 1) { // Wall detected
+					hit = true;
+				} else if (cellValue >= 2) { // Unavailable cell
+					return 20; // Stop casting on unavailable cell
+				}
+			}
+			return distance;
+		}
+
+		// Adjust wall color brightness
+		function adjustBrightness(hexColor, brightness) {
+			let r = parseInt(hexColor.substr(1,2),16) * brightness;
+			let g = parseInt(hexColor.substr(3,2),16) * brightness;
+			let b = parseInt(hexColor.substr(5,2),16) * brightness;
+			return 'rgb(' + r + ',' + g + ',' + b + ')';
+		}
+		
+		function changePreviewMazeOn() {		
+			previewOn = !previewOn;
+			isChecked = previewOn;
+			//const isChecked = document.getElementById('previewMazeCheckbox').checked;
+			document.getElementById('previewCanvas').style.display = isChecked ? 'block' : 'none';
+			document.getElementById('printButton').style.display = isChecked ? 'block' : 'none';
+			document.getElementById('includeSettingsDiv').style.display = isChecked ? 'flex' : 'none';
+			document.getElementById('thinWallsDiv').style.display = isChecked ? 'flex' : 'none';
+			document.getElementById('showSolutionDiv').style.display = isChecked ? 'flex' : 'none';
+			document.getElementById('showSolutionDiv').style.display = isChecked ? 'flex' : 'none';
+			document.getElementById('previewMazeButton').textContent = isChecked ? 'Hide Maze' : 'Preview Maze';
+			if (isChecked) previewMaze();	
+			saveInputs()			
+		}
+
+		window.addEventListener('keydown', function(e) {keys[e.key] = true;});    
+		window.addEventListener('resize', resizeCanvas);	
+		window.addEventListener('keyup', function(e) {keys[e.key] = false;});	
+		window.addEventListener("load", loadInputs);
+		document.getElementById('thinWalls').addEventListener('change', previewMaze);
+		document.getElementById('showSolution').addEventListener('change', previewMaze);				
+		document.getElementById('printButton').addEventListener('click', function() {
+			const previewCanvas = document.getElementById('previewCanvas');
+			const includeSettings = document.getElementById('includeSettings').checked;
+			// Define A4 size in pixels (210mm x 297mm at 3.77953 px per mm)
+			const a4Width = 210 * 3.77953;
+			const a4Height = 297 * 3.77953;
+			// Calculate scale factor to fit the canvas and definitions within A4 height
+			let tempCanvasHeight = previewCanvas.height;
+			let extraHeight = 0;
+			// Temporarily create a container for the definitions text if included
+			let definitionsHTML = '';
+			if (includeSettings) {
+				const algorithm = document.getElementById('algorithm').value;
+				const width = document.getElementById('mazeWidth').value;
+				const height = document.getElementById('mazeHeight').value;
+				const seed = document.getElementById('mazeSeed').value;				
+				definitionsHTML = `
+					<div style="margin-top: 20px; text-align: center; font-size: 14px;">
+						<h3 style="margin: 10px 0;">Maze Generation Definitions</h3>
+						<p><strong>Algorithm:</strong> ${algorithm}</p>
+						<p><strong>Width:</strong> ${width}</p>
+						<p><strong>Height:</strong> ${height}</p>
+						<p><strong>Seed:</strong> ${seed}</p>
+					</div>
+				`;				
+				// Estimate the extra height for definitions text
+				extraHeight = 150; // Approximate height for definitions in pixels
+			}
+			// Calculate the scale factor for both the canvas and the definitions to fit A4 height
+			const combinedScaleFactor = Math.min(a4Width / previewCanvas.width, (a4Height - extraHeight) / tempCanvasHeight);
+			// Create a temporary canvas for scaled output
+			const tempCanvas = document.createElement('canvas');
+			tempCanvas.width = previewCanvas.width * combinedScaleFactor;
+			tempCanvas.height = (tempCanvasHeight * combinedScaleFactor) + extraHeight;
+			const tempCtx = tempCanvas.getContext('2d');
+			tempCtx.drawImage(previewCanvas, 0, 0, tempCanvas.width, tempCanvasHeight * combinedScaleFactor);
+			// Open a new window for printing
+			const printWindow = window.open('', '_blank');
+			printWindow.document.write('<html><head><title>Print Preview</title></head><body style="display: flex; justify-content: center; align-items: center; flex-direction: column; margin: 0; padding: 20px;">');
+			printWindow.document.write(`<img src="${tempCanvas.toDataURL()}" style="max-width:100%; height:auto; display: block; margin: 0 auto;">`);
+			// Add definitions text if selected, already scaled for A4
+			if (includeSettings) {printWindow.document.write(definitionsHTML);}
+			printWindow.document.write('</body></html>');
+			printWindow.document.close();
+			// Wait for the content to load, then print
+			printWindow.onload = function() {printWindow.print();};
+		});	
+		
+	</script>
+</body>
+</html>
