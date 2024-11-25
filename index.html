@@ -162,7 +162,11 @@
 				</label>
 				<label>Movement Speed: 
 					<input type="number" id="moveSpeed" value="2" step="0.1" min="0.1">
-				</label>		
+				</label>
+				<div style="display: flex; align-items: center; margin-bottom: 8px;">
+					<input type="checkbox" id="mouseControl" checked />
+					<label for="mouseControl" style="margin-left: 5px;">Mouse control (left-click + move to turn, wheels to go forward and backwards)</label>
+				</div>
 			</fieldset>		
 			<fieldset>				
 				<legend>Appearance</legend>			
@@ -190,6 +194,14 @@
 		const FOV = Math.PI / 3;    
 		let gameEnded = false; 
 		let mazeGenerated = false; // Flag to track if a preview has been generated
+		let isLeftMouseDown = false; // Track left mouse button state
+		let mouseMovement = 0;       // Track mouse movement for rotation
+		let mouseWheelDelta = 0;     // Track mouse wheel movement
+		let touchStartX = 0;
+		let touchStartY = 0;
+		let touchDeltaX = 0;
+		let touchDeltaY = 0;
+		let isTouchActive = false;
 			
 		function saveInputs() {
 			localStorage.setItem("algorithm", document.getElementById("algorithm").value);
@@ -211,7 +223,8 @@
 			localStorage.setItem("thinWalls", document.getElementById("thinWalls").checked);
 			localStorage.setItem("showSolution", document.getElementById("showSolution").checked);
 			localStorage.setItem("showCompass", document.getElementById("showCompass").checked);	
-			localStorage.setItem("exitDistance", document.getElementById("exitDistance").value);	
+			localStorage.setItem("exitDistance", document.getElementById("exitDistance").value);
+			localStorage.setItem("mouseControl", document.getElementById("mouseControl").checked);	
 		}
 
 		function loadInputs() {
@@ -235,6 +248,7 @@
 			document.getElementById("showSolution").checked = localStorage.getItem("showSolution") === "true";
 			document.getElementById("showCompass").checked = localStorage.getItem("showCompass") === "true";
 			document.getElementById("exitDistance").value = localStorage.getItem("exitDistance") || 0.8;
+			document.getElementById("mouseControl").checked = localStorage.getItem("mouseControl") === "true";
 			changePreviewMazeOn();
 		}
 
@@ -343,8 +357,7 @@
 		}
 
 		// Start the 3d game with the selected options
-		function start3dGame() {
-			saveInputs();
+		function start3dGame() {			
 			widthInput = parseInt(document.getElementById('mazeWidth').value) * 2 + 1;
 			heightInput = parseInt(document.getElementById('mazeHeight').value) * 2 + 1;
 			wallColor = document.getElementById('wallColor').value;
@@ -360,6 +373,7 @@
 			showDepth = document.getElementById('showDepth').checked;
 			showCompass = document.getElementById('showCompass').checked;
 			enableTimer = document.getElementById('enableTimer').checked; // Check if timer is enabled
+			mouseControl = document.getElementById('mouseControl').checked; // Check if timer is enabled
 			canvas = document.getElementById('gameCanvas');
 			canvas.style.display = 'block';
 			ctx = canvas.getContext('2d');
@@ -379,7 +393,8 @@
 			 // Ensure the player does not start facing a wall
 			while (isFacingWall(player)) {
 				player.angle += Math.PI / 2; // Rotate by 90 degrees (π/2 radians)
-			}		
+			}
+			saveInputs();
 			resizeCanvas();
 			document.getElementById('controls').style.display = 'none';
 			document.getElementById('titleText').style.display = 'none';
@@ -1404,6 +1419,27 @@
 			if (keys['ArrowDown'] || keys['s']) {
 				moveStep = -moveSpeed;
 			}
+			if (mouseControl) {
+				if (isLeftMouseDown) {
+					player.angle -= mouseMovement * 0.002; // Adjust sensitivity by scaling
+					mouseMovement = 0; // Reset movement after applying
+				}			
+				if (mouseWheelDelta !== 0) {
+					moveStep = mouseWheelDelta < 0 ? moveSpeed * 10: -moveSpeed * 10; // Negative delta for forward, positive for backward
+					mouseWheelDelta = 0; // Reset wheel delta after applying
+				}
+			}			
+			
+			if (isTouchActive) {         
+				if (Math.abs(touchDeltaY) > Math.abs(touchDeltaX)) {
+					moveStep = touchDeltaY > 0 ? moveSpeed : -moveSpeed;
+				} else {
+					player.angle += touchDeltaX * 0.005; // Adjust sensitivity as needed
+				}
+            touchDeltaX = 0;
+            touchDeltaY = 0;
+			}
+			
 			let newX = player.x + Math.cos(player.angle) * moveStep * 0.1;
 			let newY = player.y + Math.sin(player.angle) * moveStep * 0.1;		
 			// Check collision on the X-axis and allow sliding on Y if blocked
@@ -1723,7 +1759,32 @@
 			if (isChecked) previewMaze();	
 			saveInputs()			
 		}
-
+		
+		document.addEventListener('touchstart', (event) => {
+			if (event.touches.length === 1) {
+				const touch = event.touches[0];
+				touchStartX = touch.clientX;
+				touchStartY = touch.clientY;
+				isTouchActive = true;
+			}
+		});
+		document.addEventListener('touchmove', (event) => {
+			if (isTouchActive && event.touches.length === 1) {
+				const touch = event.touches[0];
+				touchDeltaX = touch.clientX - touchStartX;
+				touchDeltaY = touch.clientY - touchStartY;
+			}
+		});
+		document.addEventListener('touchend', () => {			
+				isTouchActive = false;
+				touchDeltaX = 0;
+				touchDeltaY = 0;
+			}
+		});
+		document.addEventListener('mousedown', (e) => {if (e.button === 0) isLeftMouseDown = true;});
+		document.addEventListener('mouseup', (e) => {if (e.button === 0) isLeftMouseDown = false;});
+		document.addEventListener('mousemove', (e) => {if (isLeftMouseDown) {mouseMovement = e.movementX;}});
+		document.addEventListener('wheel', (e) => {mouseWheelDelta = e.deltaY;});
 		window.addEventListener('keydown', function(e) {keys[e.key] = true;});    
 		window.addEventListener('resize', resizeCanvas);	
 		window.addEventListener('keyup', function(e) {keys[e.key] = false;});	
@@ -1731,52 +1792,52 @@
 		document.getElementById('thinWalls').addEventListener('change', previewMaze);
 		document.getElementById('showSolution').addEventListener('change', previewMaze);				
 		document.getElementById('printButton').addEventListener('click', function() {
-			const previewCanvas = document.getElementById('previewCanvas');
-			const includeSettings = document.getElementById('includeSettings').checked;
-			// Define A4 size in pixels (210mm x 297mm at 3.77953 px per mm)
-			const a4Width = 210 * 3.77953;
-			const a4Height = 297 * 3.77953;
-			// Calculate scale factor to fit the canvas and definitions within A4 height
-			let tempCanvasHeight = previewCanvas.height;
-			let extraHeight = 0;
-			// Temporarily create a container for the definitions text if included
-			let definitionsHTML = '';
-			if (includeSettings) {
-				const algorithm = document.getElementById('algorithm').value;
-				const width = document.getElementById('mazeWidth').value;
-				const height = document.getElementById('mazeHeight').value;
-				const seed = document.getElementById('mazeSeed').value;				
-				definitionsHTML = `
-					<div style="margin-top: 20px; text-align: center; font-size: 14px;">
-						<h3 style="margin: 10px 0;">Maze Generation Definitions</h3>
-						<p><strong>Algorithm:</strong> ${algorithm}</p>
-						<p><strong>Width:</strong> ${width}</p>
-						<p><strong>Height:</strong> ${height}</p>
-						<p><strong>Seed:</strong> ${seed}</p>
-					</div>
-				`;				
-				// Estimate the extra height for definitions text
-				extraHeight = 150; // Approximate height for definitions in pixels
-			}
-			// Calculate the scale factor for both the canvas and the definitions to fit A4 height
-			const combinedScaleFactor = Math.min(a4Width / previewCanvas.width, (a4Height - extraHeight) / tempCanvasHeight);
-			// Create a temporary canvas for scaled output
-			const tempCanvas = document.createElement('canvas');
-			tempCanvas.width = previewCanvas.width * combinedScaleFactor;
-			tempCanvas.height = (tempCanvasHeight * combinedScaleFactor) + extraHeight;
-			const tempCtx = tempCanvas.getContext('2d');
-			tempCtx.drawImage(previewCanvas, 0, 0, tempCanvas.width, tempCanvasHeight * combinedScaleFactor);
-			// Open a new window for printing
-			const printWindow = window.open('', '_blank');
-			printWindow.document.write('<html><head><title>Print Preview</title></head><body style="display: flex; justify-content: center; align-items: center; flex-direction: column; margin: 0; padding: 20px;">');
-			printWindow.document.write(`<img src="${tempCanvas.toDataURL()}" style="max-width:100%; height:auto; display: block; margin: 0 auto;">`);
-			// Add definitions text if selected, already scaled for A4
-			if (includeSettings) {printWindow.document.write(definitionsHTML);}
-			printWindow.document.write('</body></html>');
-			printWindow.document.close();
-			// Wait for the content to load, then print
-			printWindow.onload = function() {printWindow.print();};
-		});	
+		const previewCanvas = document.getElementById('previewCanvas');
+		const includeSettings = document.getElementById('includeSettings').checked;
+		// Define A4 size in pixels (210mm x 297mm at 3.77953 px per mm)
+		const a4Width = 210 * 3.77953;
+		const a4Height = 297 * 3.77953;
+		// Calculate scale factor to fit the canvas and definitions within A4 height
+		let tempCanvasHeight = previewCanvas.height;
+		let extraHeight = 0;
+		// Temporarily create a container for the definitions text if included
+		let definitionsHTML = '';
+		if (includeSettings) {
+			const algorithm = document.getElementById('algorithm').value;
+			const width = document.getElementById('mazeWidth').value;
+			const height = document.getElementById('mazeHeight').value;
+			const seed = document.getElementById('mazeSeed').value;				
+			definitionsHTML = `
+				<div style="margin-top: 20px; text-align: center; font-size: 14px;">
+					<h3 style="margin: 10px 0;">Maze Generation Definitions</h3>
+					<p><strong>Algorithm:</strong> ${algorithm}</p>
+					<p><strong>Width:</strong> ${width}</p>
+					<p><strong>Height:</strong> ${height}</p>
+					<p><strong>Seed:</strong> ${seed}</p>
+				</div>
+			`;				
+			// Estimate the extra height for definitions text
+			extraHeight = 150; // Approximate height for definitions in pixels
+		}
+		// Calculate the scale factor for both the canvas and the definitions to fit A4 height
+		const combinedScaleFactor = Math.min(a4Width / previewCanvas.width, (a4Height - extraHeight) / tempCanvasHeight);
+		// Create a temporary canvas for scaled output
+		const tempCanvas = document.createElement('canvas');
+		tempCanvas.width = previewCanvas.width * combinedScaleFactor;
+		tempCanvas.height = (tempCanvasHeight * combinedScaleFactor) + extraHeight;
+		const tempCtx = tempCanvas.getContext('2d');
+		tempCtx.drawImage(previewCanvas, 0, 0, tempCanvas.width, tempCanvasHeight * combinedScaleFactor);
+		// Open a new window for printing
+		const printWindow = window.open('', '_blank');
+		printWindow.document.write('<html><head><title>Print Preview</title></head><body style="display: flex; justify-content: center; align-items: center; flex-direction: column; margin: 0; padding: 20px;">');
+		printWindow.document.write(`<img src="${tempCanvas.toDataURL()}" style="max-width:100%; height:auto; display: block; margin: 0 auto;">`);
+		// Add definitions text if selected, already scaled for A4
+		if (includeSettings) {printWindow.document.write(definitionsHTML);}
+		printWindow.document.write('</body></html>');
+		printWindow.document.close();
+		// Wait for the content to load, then print
+		printWindow.onload = function() {printWindow.print();};
+	});	
 		
 	</script>
 </body>
