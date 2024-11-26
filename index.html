@@ -25,6 +25,9 @@
 			background: #f9f9f9;
 			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 		}
+		.checklabel {
+			margin-top: 10px;
+		}
 		legend {
 			font-weight: bold;
 			padding: 0 10px;
@@ -103,7 +106,7 @@
 				<input type="text" id="mazeSeed">				
 			</label> 
 			<label>Min distance from entrance to exit (%):
-				<input type="number" id="exitDistance" value="0.5" min="0.1" max ="1.0" step="0.05">
+				<input type="number" id="exitDistance" value="50" min="10" max ="100" step="1">
 			</label>			
 		</fieldset>
 		<fieldset>
@@ -112,47 +115,47 @@
 				<button id="previewMazeButton" onclick="changePreviewMazeOn()" style="display: block; margin-top:15px; margin-bottom:15px; width: 100%; min-height: 30px;">Preview Maze</button>
 			</div>		
 			<canvas id="previewCanvas" style="width: 100%; height: auto; margin-bottom:15px; display:none;"></canvas>			
-			<div id="thinWallsDiv" style="display: none;  margin-bottom: 8px;">
-				<input type="checkbox" id="thinWalls" />
-				<label for="thinWalls" style="margin-left: 5px;">Show thin walls (printer-friendly)</label>
-			</div>
 			<div id="showSolutionDiv" style="display: none; align-items: center; margin-bottom: 8px;">
 				<input type="checkbox" id="showSolution" />
-				<label for="showSolution" style="margin-left: 5px;">Show solution</label>
+				<label class="checklabel" for="showSolution" style="margin-left: 5px;">Show solution</label>
 			</div>
+			<div id="thinWallsDiv" style="display: none;  margin-bottom: 8px;">
+				<input type="checkbox" id="thinWalls" />
+				<label class="checklabel" for="thinWalls" style="margin-left: 5px;">Show thin walls (printer-friendly)</label>
+			</div>			
 			<div id="includeSettingsDiv" style="display: none; align-items: center; margin-bottom: 8px;">
 				<input type="checkbox" id="includeSettings" />
-				<label for="includeSettings" style="margin-left: 5px;">Include maze generation definitions in print</label>
+				<label class="checklabel" for="includeSettings" style="margin-left: 5px;">Include maze generation definitions in print</label>
 			</div>
 			<button id="printButton" style="display: none;">Print Maze</button>
 		</fieldset>
 		<fieldset>
 			<legend>3d Exploration</legend>		
 			<button onclick="start3dGame()" style="display: block; margin-top:15px; margin-bottom:0px; width: 100%; min-height: 30px;">Explore the Maze in 3D!</button><br>
-			<div style="display: flex; align-items: center; margin-bottom: 8px;">
+			<div style="display: flex; align-items: center; margin-bottom: 0px; margin-left: 15px;">
 				<input type="checkbox" id="enableTimer" />
-				<label for="enableTimer" style="margin-left: 5px;">Enable Timer</label>
+				<label class="checklabel" for="enableTimer" style="margin-left: 5px;">Enable Timer</label>
 			</div>		
-			<div style="display: flex; align-items: center; margin-bottom: 8px;">
+			<div style="display: flex; align-items: center; margin-bottom: 0px; margin-left: 15px;">
 				<input type="checkbox" id="showCompass" />
-				<label for="showCompass" style="margin-left: 5px;">Show Compass</label>
+				<label class="checklabel" for="showCompass" style="margin-left: 5px;">Show Compass</label>
 			</div>		
 			<fieldset>
 				<legend>Minimap</legend>			
 				<label>Minimap Size:
 					<input type="number" id="minimapSize" value="150" step="1" min="15">
 				</label>
-				<div style="display: flex; align-items: center; margin-bottom: 8px;">
+				<div style="display: flex; align-items: center; margin-bottom: 0px;">
 					<input type="checkbox" id="showMinimap" checked />
-					<label for="showMinimap" style="margin-left: 5px;">Show Minimap</label>
+					<label class="checklabel" for="showMinimap" style="margin-left: 5px;">Show Minimap</label>
 				</div>
-				<div style="display: flex; align-items: center; margin-bottom: 8px;">
+				<div style="display: flex; align-items: center; margin-bottom: 0px;">
 					<input type="checkbox" id="fogOfWar" checked />
-					<label for="fogOfWar" style="margin-left: 5px;">Fog of War</label>
+					<label class="checklabel" for="fogOfWar" style="margin-left: 5px;">Fog of War</label>
 				</div>			
-				<div style="display: flex; align-items: center; margin-bottom: 8px;">
+				<div style="display: flex; align-items: center; margin-bottom: 0px;">
 					<input type="checkbox" id="showExit" />
-					<label for="showExit" style="margin-left: 5px;">Show Exit in Minimap when Fog of War is on</label>
+					<label class="checklabel" for="showExit" style="margin-left: 5px;">Show Exit in Minimap when Fog of War is on</label>
 				</div>
 			</fieldset>
 			<fieldset>
@@ -163,9 +166,9 @@
 				<label>Movement Speed: 
 					<input type="number" id="moveSpeed" value="2" step="0.1" min="0.1">
 				</label>
-				<div style="display: flex; align-items: center; margin-bottom: 8px;">
+				<div style="display: flex; align-items: center; margin-bottom: 0px;">
 					<input type="checkbox" id="mouseControl" checked />
-					<label for="mouseControl" style="margin-left: 5px;">Mouse control (left-click + move to turn, wheels to go forward and backwards)</label>
+					<label class="checklabel" for="mouseControl" style="margin-left: 5px;">Mouse control (left-click + move to turn, wheels to go forward and backwards)</label>
 				</div>
 			</fieldset>		
 			<fieldset>				
@@ -173,13 +176,13 @@
 				<label>Wall Color:
 					<input type="color" id="wallColor" value="#c80000">
 				</label>
-				<div style="display: flex; align-items: center; margin-bottom: 8px;">
+				<div style="display: flex; align-items: center; margin-bottom: 0px;">
 					<input type="checkbox" id="edgeLines" checked />
-					<label for="edgeLines" style="margin-left: 5px;">Show Edge Lines</label>
+					<label class="checklabel" for="edgeLines" style="margin-left: 5px;">Show Edge Lines</label>
 				</div>
-				<div style="display: flex; align-items: center; margin-bottom: 8px;">
+				<div style="display: flex; align-items: center; margin-bottom: 0px;">
 					<input type="checkbox" id="showDepth" checked />
-					<label for="showDepth" style="margin-left: 5px;">Show Depth</label>
+					<label class="checklabel" for="showDepth" style="margin-left: 5px;">Show Depth</label>
 				</div>
 			</fieldset>		
 			<br>
@@ -187,7 +190,7 @@
 	</div>
 	<canvas id="gameCanvas"></canvas>
 	<script>
-		let canvas, ctx, map, player, keys, wallColor, moveSpeed, rotateSpeed, randomFunc, timerInterval, mazeData, showEdgeLines, seedInput, startTime;
+		let canvas, ctx, map, player, keys, wallColor, moveSpeed, rotateSpeed, randomFunc, timerInterval, mazeData, showEdgeLines, seedInput, startTime, previousDistance, previousWallTopY, previousWallBottomY;
 		let visitedCells = [];
 		let previewOn = false;
 		let exitCell = {};
@@ -230,24 +233,24 @@
 		function loadInputs() {
 			document.getElementById("algorithm").value = localStorage.getItem("algorithm") || "recursiveBacktracking";
 			document.getElementById("layout").value = localStorage.getItem("layout") || "rectangular";
-			document.getElementById("mazeWidth").value = localStorage.getItem("mazeWidth") || 21;
-			document.getElementById("mazeHeight").value = localStorage.getItem("mazeHeight") || 21;
-			document.getElementById("wallColor").value = localStorage.getItem("wallColor") || "#c80000";
+			document.getElementById("mazeWidth").value = localStorage.getItem("mazeWidth") || 20;
+			document.getElementById("mazeHeight").value = localStorage.getItem("mazeHeight") || 20;
+			document.getElementById("wallColor").value = localStorage.getItem("wallColor") || "#b8b8b8";
 			document.getElementById("rotateSpeed").value = localStorage.getItem("rotateSpeed") || 3;
 			document.getElementById("moveSpeed").value = localStorage.getItem("moveSpeed") || 2;			
-			previewOn = localStorage.getItem("previewOn") === "true";	
+			previewOn = localStorage.getItem("previewOn") === "true" || true;	
 			document.getElementById("minimapSize").value = localStorage.getItem("minimapSize") || 150;
 			document.getElementById("mazeSeed").value = localStorage.getItem("mazeSeed") || Math.round(Math.random() * 10000);
 			document.getElementById("enableTimer").checked = localStorage.getItem("enableTimer") === "true";
-			document.getElementById("showMinimap").checked = localStorage.getItem("showMinimap") === "true";
-			document.getElementById("fogOfWar").checked = localStorage.getItem("fogOfWar") === "true";
-			document.getElementById("edgeLines").checked = localStorage.getItem("edgeLines") === "true";
-			document.getElementById("showDepth").checked = localStorage.getItem("showDepth") === "true";
+			document.getElementById("showMinimap").checked = localStorage.getItem("showMinimap") === "true" || true;
+			document.getElementById("fogOfWar").checked = localStorage.getItem("fogOfWar") === "true" || true;
+			document.getElementById("edgeLines").checked = localStorage.getItem("edgeLines") === "true" || true;
+			document.getElementById("showDepth").checked = localStorage.getItem("showDepth") === "true" || true;
 			document.getElementById("showExit").checked = localStorage.getItem("showExit") === "true";
 			document.getElementById("thinWalls").checked = localStorage.getItem("thinWalls") === "true";
 			document.getElementById("showSolution").checked = localStorage.getItem("showSolution") === "true";
 			document.getElementById("showCompass").checked = localStorage.getItem("showCompass") === "true";
-			document.getElementById("exitDistance").value = localStorage.getItem("exitDistance") || 0.8;
+			document.getElementById("exitDistance").value = localStorage.getItem("exitDistance") || 80 ;
 			document.getElementById("mouseControl").checked = localStorage.getItem("mouseControl") === "true";
 			changePreviewMazeOn();
 		}
@@ -259,7 +262,7 @@
 			const algorithm = document.getElementById('algorithm').value;
 			const layout = document.getElementById('layout').value;
 			const mazeSeed = document.getElementById('mazeSeed').value;
-			const exitDistance = document.getElementById('exitDistance').value;
+			const exitDistance = document.getElementById('exitDistance').value / 100;
 			wallColor = document.getElementById('wallColor').value;
 			// Generate maze data but do not start the game or hide the UI        
 			mazeData = getMaze(widthInput, heightInput, algorithm, layout, exitDistance);
@@ -363,7 +366,7 @@
 			wallColor = document.getElementById('wallColor').value;
 			rotateSpeed = parseFloat(document.getElementById('rotateSpeed').value) / 100;
 			moveSpeed = parseFloat(document.getElementById('moveSpeed').value) / 10;
-			exitDistance = parseFloat(document.getElementById('exitDistance').value);
+			exitDistance = parseFloat(document.getElementById('exitDistance').value) /100;
 			minimapSize = parseInt(document.getElementById('minimapSize').value);		
 			mazeSeed = document.getElementById('mazeSeed').value;
 			showEdgeLines = document.getElementById('edgeLines').checked;
@@ -1386,7 +1389,7 @@
 					const textY = compassY - (compassHeight / 2) * Math.cos(displayAngle);
 					// Adjust font size for main cardinal points
 					ctx.font = (i === 0) ? '16px Arial' : '12px Arial';
-					ctx.fillStyle = (i === 0) ? 'lime' : 'white';
+					ctx.fillStyle = (i === 0) ? 'white' : 'white'; // North can have a different color, kept white for now
 					ctx.fillText(dir, textX, textY);
 				}
 			});
@@ -1429,17 +1432,15 @@
 					mouseWheelDelta = 0; // Reset wheel delta after applying
 				}
 			}			
-			
 			if (isTouchActive) {         
 				if (Math.abs(touchDeltaY) > Math.abs(touchDeltaX)) {
-					moveStep = touchDeltaY > 0 ? moveSpeed : -moveSpeed;
+					moveStep = touchDeltaY > 0 ? moveSpeed : -moveSpeed * touchDeltaY * 1.5;
 				} else {
-					player.angle += touchDeltaX * 0.005; // Adjust sensitivity as needed
+					player.angle -= touchDeltaX * 0.0001; // Adjust sensitivity as needed
 				}
-            touchDeltaX = 0;
-            touchDeltaY = 0;
-			}
-			
+				touchDeltaX = 0;
+				touchDeltaY = 0;
+			}			
 			let newX = player.x + Math.cos(player.angle) * moveStep * 0.1;
 			let newY = player.y + Math.sin(player.angle) * moveStep * 0.1;		
 			// Check collision on the X-axis and allow sliding on Y if blocked
@@ -1464,10 +1465,7 @@
 			ctx.fillRect(0, 0, canvas.width, canvas.height / 2); // Ceiling
 			ctx.fillStyle = '#444';
 			ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2); // Floor
-			// Ray casting for each vertical slice
-			let previousDistance = null;
-			let previousWallTopY = null;
-			let previousWallBottomY = null;		
+			// Ray casting for each vertical slice				
 			for (let x = 0; x < canvas.width; x++) {
 				let rayAngle = (player.angle - FOV / 2) + (x / canvas.width) * FOV;
 				let distance = castRay(rayAngle);
@@ -1502,12 +1500,13 @@
 								// Left curve: Draw line on x (current slice), matching current wall height
 								ctx.fillRect(x, wallTopY, 1, lineHeight);
 							}
-						}
+						}						
 					}
 					// Update previous distance and wall top/bottom for the next iteration
 					previousDistance = distance;
 					previousWallTopY = wallTopY;
 					previousWallBottomY = wallBottomY;
+					
 				}
 			}
 			// Draw the minimap if enabled
@@ -1803,16 +1802,20 @@
 		let definitionsHTML = '';
 		if (includeSettings) {
 			const algorithm = document.getElementById('algorithm').value;
+			const layout = document.getElementById('layout').value;
 			const width = document.getElementById('mazeWidth').value;
 			const height = document.getElementById('mazeHeight').value;
-			const seed = document.getElementById('mazeSeed').value;				
+			const seed = document.getElementById('mazeSeed').value;
+			const exitDistance = document.getElementById('exitDistance').value;
 			definitionsHTML = `
 				<div style="margin-top: 20px; text-align: center; font-size: 14px;">
 					<h3 style="margin: 10px 0;">Maze Generation Definitions</h3>
 					<p><strong>Algorithm:</strong> ${algorithm}</p>
+					<p><strong>Layout:</strong> ${layout}</p>
 					<p><strong>Width:</strong> ${width}</p>
 					<p><strong>Height:</strong> ${height}</p>
 					<p><strong>Seed:</strong> ${seed}</p>
+					<p><strong>% Min Exit Distance:</strong> ${exitDistance}</p>
 				</div>
 			`;				
 			// Estimate the extra height for definitions text
